@@ -61,17 +61,19 @@ output.txt.txt
 *.tiff
 *.pdf
 
-# …except shipped demo assets in docs/ that the README links to.
-!docs/*.jpg
-!docs/*.jpeg
-!docs/*.png
-!docs/*.gif
-!docs/*.webp
-# …and curated docs/ subfolder assets (e.g. accessibility before/after shots).
-!docs/**/*.png
-!docs/**/*.jpg
-!docs/**/*.gif
-!docs/**/*.webp
+# …except shipped demo assets in app/docs/ that the README links to.
+!app/docs/*.jpg
+!app/docs/*.jpeg
+!app/docs/*.png
+!app/docs/*.gif
+!app/docs/*.webp
+# …and curated app/docs/ subfolder assets (e.g. accessibility before/after shots).
+!app/docs/**/*.png
+!app/docs/**/*.jpg
+!app/docs/**/*.gif
+!app/docs/**/*.webp
+!app/static/*.png
+
 
 # Reports and temp files
 reports/
