@@ -1,6 +1,11 @@
 # app.py — slim orchestrator
-import mimetypes
 import os
+import sys
+
+# Add the app directory to sys.path so nested packages can import each other as if they were top-level
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import mimetypes
 
 
 def register_static_mime_types() -> None:

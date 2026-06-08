@@ -125,7 +125,7 @@ def create_default_admin():
 
 def create_env():
     """Copy .env.example to .env if it doesn't exist."""
-    env_path = os.path.join(BASE_DIR, ".env")
+    env_path = os.path.join(os.path.dirname(BASE_DIR), ".env")
     example_path = os.path.join(BASE_DIR, ".env.example")
     if os.path.exists(env_path):
         print("  [skip] .env already exists")

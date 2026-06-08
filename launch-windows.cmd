@@ -124,7 +124,7 @@ if errorlevel 1 (
 echo.
 echo ==^> Installing/updating dependencies...
 venv\Scripts\python.exe -m pip install --upgrade pip --quiet
-venv\Scripts\python.exe -m pip install -r requirements.txt
+venv\Scripts\python.exe -m pip install -r app\requirements.txt
 if errorlevel 1 (
     echo ERROR: Dependency installation failed.
     pause
@@ -134,7 +134,7 @@ if errorlevel 1 (
 :: 4. First-time setup (creates data dirs, DB, .env, admin user)
 echo.
 echo ==^> Running setup...
-venv\Scripts\python.exe setup.py
+venv\Scripts\python.exe app\setup.py
 if errorlevel 1 (
     echo ERROR: setup.py failed.
     pause
@@ -156,4 +156,4 @@ echo.
 echo ==^> Starting Odysseus at http://!BIND_HOST!:!BIND_PORT!
 echo Press Ctrl+C to stop.
 echo.
-venv\Scripts\python.exe -m uvicorn app:app --host !BIND_HOST! --port !BIND_PORT!
+venv\Scripts\python.exe -m uvicorn app.app:app --host !BIND_HOST! --port !BIND_PORT!
