@@ -3,10 +3,11 @@
 ```
 ───────────────────────────────────────────────
  ⊹ ࣪ ˖ ૮( ˶ᵔ ᵕ ᵔ˶ )っ  Odysseus vers. 1.0
+ ⊹ ࣪ ˖ Powered by Shiryu Studios
 ───────────────────────────────────────────────
 ```
 
-![Odysseus](docs/odysseus.jpg)
+![Odysseus](app/docs/odysseus.jpg)
 
 A self-hosted AI workspace -- meant to be the self-hosted version of the UI experience you get from ChatGPT and Claude. But with more jank and fun. Running on your own hardware, with your own data -- local-first, privacy-first, and no trojan.
 
