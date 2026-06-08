@@ -55,21 +55,43 @@ def setup_tray():
     app_url = f"http://{host}:{port}"
 
     def get_icon_image():
-        # Try to load existing logo
-        icon_path = os.path.join(os.path.dirname(__file__), "..", "docs", "odysseus.jpg")
-        if os.path.exists(icon_path):
-            try:
-                return Image.open(icon_path)
-            except Exception as e:
-                logger.warning(f"Failed to load icon from {icon_path}: {e}")
+        # Try to load custom override icon if present (excluding the screenshot docs/odysseus.jpg)
+        for logo_name in ["logo.png", "logo.jpg", "favicon.png"]:
+            for folder in ["static", "docs"]:
+                logo_path = os.path.join(os.path.dirname(__file__), "..", folder, logo_name)
+                if os.path.exists(logo_path):
+                    try:
+                        return Image.open(logo_path)
+                    except Exception as e:
+                        logger.warning(f"Failed to load logo from {logo_path}: {e}")
         
-        # Fallback: Create a simple 64x64 icon (sailboat shape matching Odysseus theme)
-        img = Image.new("RGB", (64, 64), color="#282c34")
+        # Fallback/Default: Create a beautiful transparent 64x64 icon
+        # drawing the official sailboat logo matching the Odysseus theme.
+        img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
-        # Draw a simple sailboat shape in red
-        draw.polygon([(32, 10), (32, 44), (12, 44)], fill="#e06c75")
-        draw.polygon([(32, 18), (32, 44), (48, 44)], fill="#e06c75")
-        draw.line([(8, 48), (56, 48)], fill="#e06c75", width=4)
+        
+        # Draw left sail (solid red-pink)
+        draw.polygon([(32, 8), (32, 44), (12, 44)], fill=(224, 108, 117, 255))
+        
+        # Draw right sail (semi-transparent red-pink, opacity 0.6)
+        draw.polygon([(32, 16), (32, 44), (48, 44)], fill=(224, 108, 117, 153))
+        
+        # Calculate quadratic Bezier points for the wave boat bottom
+        def get_quadratic_bezier_points(p0, p1, p2, steps=20):
+            points = []
+            for i in range(steps + 1):
+                t = i / steps
+                x = (1 - t)**2 * p0[0] + 2 * (1 - t) * t * p1[0] + t**2 * p2[0]
+                y = (1 - t)**2 * p0[1] + 2 * (1 - t) * t * p1[1] + t**2 * p2[1]
+                points.append((x, y))
+            return points
+            
+        curve1 = get_quadratic_bezier_points((8, 48), (20, 40), (32, 48))
+        curve2 = get_quadratic_bezier_points((32, 48), (44, 56), (56, 48))
+        
+        draw.line(curve1, fill=(224, 108, 117, 255), width=5, joint="round")
+        draw.line(curve2, fill=(224, 108, 117, 255), width=5, joint="round")
+        
         return img
 
     def on_clicked(icon, item):
