@@ -55,7 +55,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 # Core imports
 from core.constants import (
-    BASE_DIR, STATIC_DIR, SESSIONS_FILE,
+    BASE_DIR, STATIC_DIR, DATA_DIR, SESSIONS_FILE,
     REQUEST_TIMEOUT, OPENAI_API_KEY,
 )
 from core.database import SessionLocal, ApiToken
@@ -386,7 +386,7 @@ class _RevalidatingStatic(StaticFiles):
         return resp
 
 
-app.mount("/static", _RevalidatingStatic(directory="static"), name="static")
+app.mount("/static", _RevalidatingStatic(directory=STATIC_DIR), name="static")
 
 # ========= GENERATED IMAGES =========
 @app.get("/api/generated-image/{filename}")
@@ -396,7 +396,7 @@ async def serve_generated_image(filename: str, request: Request):
     import re
     if not re.match(r'^[a-f0-9]{8,64}\.(png|jpg|jpeg|webp|gif|mp4|mov|webm|mkv|m4v)$', filename):
         raise HTTPException(status_code=400, detail="Invalid filename")
-    img_path = Path("data/generated_images") / filename
+    img_path = Path(DATA_DIR) / "generated_images" / filename
     if not img_path.exists():
         raise HTTPException(status_code=404, detail="Image not found")
     # SECURITY: filename is the only key, so anyone who knows / guesses a
@@ -953,7 +953,7 @@ async def _startup_event():
         owners = set()
         try:
             import json as _json
-            auth_path = "data/auth.json"
+            auth_path = os.path.join(DATA_DIR, "auth.json")
             with open(auth_path, encoding="utf-8") as f:
                 users = _json.load(f).get("users", {})
             owners.update(users.keys())
@@ -1000,7 +1000,7 @@ async def _startup_event():
     # does not make an existing library look empty after auth/account changes.
     try:
         import json as _json
-        auth_path = "data/auth.json"
+        auth_path = os.path.join(DATA_DIR, "auth.json")
         with open(auth_path, encoding="utf-8") as f:
             users = _json.load(f).get("users", {})
         primary_owner = None

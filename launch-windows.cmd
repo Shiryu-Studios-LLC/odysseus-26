@@ -145,7 +145,7 @@ if errorlevel 1 (
 where bash >nul 2>nul
 if errorlevel 1 (
     echo.
-    echo NOTE: Git Bash (bash.exe) was not found on PATH.
+    echo NOTE: Git Bash [bash.exe] was not found on PATH.
     echo       The core app works without it. For full Cookbook background
     echo       downloads and the agent shell tool, install Git for Windows:
     echo       https://git-scm.com/download/win
@@ -157,3 +157,13 @@ echo ==^> Starting Odysseus at http://!BIND_HOST!:!BIND_PORT!
 echo Press Ctrl+C to stop.
 echo.
 venv\Scripts\python.exe -m uvicorn app.app:app --host !BIND_HOST! --port !BIND_PORT!
+if errorlevel 1 (
+    echo.
+    echo ERROR: Odysseus failed to start or exited with an error.
+    pause
+    exit /b !errorlevel!
+)
+echo.
+echo Odysseus server has shut down.
+pause
+
