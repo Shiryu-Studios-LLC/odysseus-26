@@ -38,7 +38,7 @@ if not "%~1"=="" (
 goto :args_done
 
 :help
-echo Usage: launch-windows.cmd [--host HOST] [--port PORT]
+echo Usage: shirabe.cmd [--host HOST] [--port PORT]
 echo.
 echo Options:
 echo   --host HOST    IP address to bind the server to (default: 127.0.0.1)
@@ -165,7 +165,7 @@ if exist .env (
     )
     if defined HAS_TUNNEL (
         echo ==^> Starting Cloudflare Tunnel in background (hidden)...
-        powershell -Command "Start-Process cmd -ArgumentList '/c launch-windows.cmd --tunnel' -WindowStyle Hidden"
+        powershell -Command "Start-Process cmd -ArgumentList '/c shirabe.cmd --tunnel' -WindowStyle Hidden"
     )
 )
 

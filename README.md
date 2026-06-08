@@ -268,7 +268,7 @@ server; safe to re-run):
 ```cmd
 git clone https://github.com/pewdiepie-archdaemon/shirabe.git
 cd shirabe
-launch-windows.cmd
+shirabe.cmd
 ```
 
 Or do it by hand:

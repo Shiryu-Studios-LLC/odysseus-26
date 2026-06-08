@@ -34,7 +34,7 @@ body:
         - "-- Please Select --"
         - Docker (docker compose up)
         - Manual Python install (pip / venv)
-        - Windows native (launch-windows.cmd)
+        - Windows native (shirabe.cmd)
         - macOS app (build-macos-app.sh / start-macos.sh)
         - Other (describe in the reproduction steps below)
     validations:
