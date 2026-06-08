@@ -46,6 +46,31 @@ exit /b 0
 
 :args_done
 
+:: 0. Check for Git updates (pull latest changes before launching)
+where git >nul 2>nul
+if errorlevel 1 (
+    echo NOTE: Git command was not found on PATH. Skipping update check.
+    goto :git_done
+)
+
+if not exist .git (
+    echo NOTE: Not a git repository. Skipping update check.
+    goto :git_done
+)
+
+echo ==^> Checking for updates...
+git pull --ff-only
+if not errorlevel 1 goto :git_success
+echo WARNING: Git pull failed (you may be offline or have local changes).
+echo          Continuing to launch Odysseus anyway...
+goto :git_done
+
+:git_success
+echo Update check complete.
+
+:git_done
+echo.
+
 :: 1. Locate a Python 3.11+ interpreter
 echo ==^> Checking for Python 3.11+...
 
