@@ -1,4 +1,4 @@
-// static/js/chat.js
+﻿// static/js/chat.js
 
 /**
  * Main chat functionality - message handling and streaming
@@ -185,7 +185,7 @@ import createResearchSynapse from './researchSynapse.js';
       // Clear any pending transitions from + → arrow swap
       submitBtn.classList.remove('anim-spin', 'anim-spin-swap', 'anim-land', 'mic-mode', 'newchat-mode', 'newchat-expanded', 'recording');
       // Ensure arrow icon is showing before launch
-      var icons = window._shirabeBtnIcons;
+      var icons = window._shirabiBtnIcons;
       if (icons) submitBtn.innerHTML = icons.send;
       void submitBtn.offsetWidth;
       // Arrow launches up, then stop icon lands in
@@ -216,7 +216,7 @@ import createResearchSynapse from './researchSynapse.js';
       if (window._updateSendBtnIcon) {
         setTimeout(window._updateSendBtnIcon, 50);
       } else {
-        var icons = window._shirabeBtnIcons;
+        var icons = window._shirabiBtnIcons;
         submitBtn.innerHTML = icons ? icons.send : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
         submitBtn.title = 'Send message';
         submitBtn.classList.remove('mic-mode', 'newchat-mode');
@@ -449,10 +449,10 @@ import createResearchSynapse from './researchSynapse.js';
           const dcRes = await fetch('/api/default-chat');
           dc = await dcRes.json();
           if (dc && dc.endpoint_url && dc.model) {
-            try { window.__shirabeDefaultChat = dc; } catch (_) {}
+            try { window.__shirabiDefaultChat = dc; } catch (_) {}
           }
         } catch (_) {
-          dc = (typeof window !== 'undefined' && window.__shirabeDefaultChat) || null;
+          dc = (typeof window !== 'undefined' && window.__shirabiDefaultChat) || null;
         }
         if (dc.endpoint_url && dc.model) {
           await sessionModule.createDirectChat(dc.endpoint_url, dc.model, dc.endpoint_id);
@@ -510,7 +510,7 @@ import createResearchSynapse from './researchSynapse.js';
 
     // Acquire Web Lock to hint browser not to discard this tab while streaming
     if (navigator.locks) {
-      navigator.locks.request('shirabe-stream-' + streamSessionId, { mode: 'exclusive', ifAvailable: true }, lock => {
+      navigator.locks.request('shirabi-stream-' + streamSessionId, { mode: 'exclusive', ifAvailable: true }, lock => {
         if (!lock) return; // Another stream already holds a lock — fine
         return new Promise(resolve => { _webLockRelease = resolve; });
       }).catch(e => console.warn('web lock acquire failed:', e)); // Ignore lock errors — best-effort
@@ -1004,8 +1004,9 @@ import createResearchSynapse from './researchSynapse.js';
       let metrics = null;
       let isThinking = false;
       let thinkingStartTime = null;
-      // Streaming TTS: synthesize sentence-by-sentence during streaming
-      const streamingTTS = !!(window.aiTTSManager && window.aiTTSManager.autoPlay && window.aiTTSManager.available);
+      // Streaming TTS: buffer text and synthesize in chunks for smoother audio
+      const streamingTTS = !!(window.aiTTSManager && window.aiTTSManager.autoPlay && window.aiTTSManager.available && !window.aiTTSManager.useBrowserTTS);
+      if (streamingTTS) window.aiTTSManager.streamingStart();
       if (streamingTTS) window.aiTTSManager.streamingStart();
       // Multi-bubble agent tracking
       let roundHolder = holder;       // Current AI text bubble (changes per round)
@@ -2567,36 +2568,32 @@ import createResearchSynapse from './researchSynapse.js';
         }
         // Also store raw on the footer target so copy/TTS work
         if (footerTarget !== holder) footerTarget.dataset.raw = accumulated;
-        if (addAITTSButton && accumulated && window.aiTTSManager?._provider !== 'disabled' && window.aiTTSManager?.available) {
-          addAITTSButton(footerTarget, accumulated);
-        }
-        // TTS auto-play: streaming mode flushes remaining text, non-streaming enqueues full message
-        if (accumulated && window.aiTTSManager && window.aiTTSManager.autoPlay) {
-          const ttsBtn = holder.querySelector('.ai-tts-button');
-          if (ttsBtn) {
-            var ICON_PLAY_TTS = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"/></svg>';
-            var ICON_STOP_TTS = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>';
-            const resetFn = () => {
-              ttsBtn.innerHTML = ICON_PLAY_TTS;
-              ttsBtn.classList.remove('playing', 'loading');
-              ttsBtn.style.color = '#6b7280';
-              ttsBtn.title = 'Read aloud';
-            };
-            if (streamingTTS) {
-              // Flush remaining partial sentence and attach the real button
-              window.aiTTSManager.streamingEnd(accumulated);
-              window.aiTTSManager.streamingAttachButton(ttsBtn, resetFn);
-              // If still playing sentences from the stream, show stop icon
-              if (window.aiTTSManager.isPlaying || window.aiTTSManager._processing) {
-                ttsBtn.innerHTML = ICON_STOP_TTS;
-                ttsBtn.classList.add('playing');
-                ttsBtn.style.color = '#ccc';
-                ttsBtn.title = 'Stop';
-              }
+        // TTS auto-play: play the full response after streaming completes
+        // Skip if streaming TTS already played everything smoothly
+        if (accumulated && window.aiTTSManager && window.aiTTSManager.autoPlay && window.aiTTSManager.available && !window.aiTTSManager.useBrowserTTS) {
+          // Find the footer's read aloud button to update its icon
+          const ttsBtn = footerTarget.querySelector('[title="Read aloud"]') || footerTarget.querySelector('.footer-copy-btn');
+          var ICON_PLAY_TTS = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"/></svg>';
+          var ICON_STOP_TTS = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>';
+          const resetFn = () => {
+            if (ttsBtn) { ttsBtn.innerHTML = ICON_PLAY_TTS; ttsBtn.title = 'Read aloud'; }
+          };
+          if (streamingTTS) {
+            // Flush any remaining text from streaming
+            window.aiTTSManager.streamingEnd(accumulated);
+            // Wait for streaming queue to finish, then don't replay
+            // If streaming already playing, just update button state
+            if (window.aiTTSManager.isPlaying || window.aiTTSManager._processing) {
+              if (ttsBtn) { ttsBtn.innerHTML = ICON_STOP_TTS; ttsBtn.title = 'Stop'; }
             } else {
-              // Non-streaming fallback (autoPlay toggled mid-stream, etc.)
-              window.aiTTSManager.enqueue(accumulated, ttsBtn, resetFn);
+              // Streaming finished cleanly — play any remaining unspoken text
+              window.aiTTSManager.play(accumulated).then(resetFn).catch(resetFn);
+              if (ttsBtn) { ttsBtn.innerHTML = ICON_STOP_TTS; ttsBtn.title = 'Stop'; }
             }
+          } else {
+            // Non-streaming fallback — play full response
+            window.aiTTSManager.play(accumulated).then(resetFn).catch(resetFn);
+            if (ttsBtn) { ttsBtn.innerHTML = ICON_STOP_TTS; ttsBtn.title = 'Stop'; }
           }
         }
         if (metrics) {
@@ -2889,7 +2886,7 @@ import createResearchSynapse from './researchSynapse.js';
             if (_box && sessionModule.getCurrentSessionId() === _timeoutSessionId) {
               var _timeoutMsg = document.createElement('div');
               _timeoutMsg.className = 'msg msg-ai';
-              _timeoutMsg.innerHTML = '<div class="role">Shirabe</div><div class="body" style="opacity:0.6;font-style:italic;">Research clarification timed out. Toggle research again to start over.</div>';
+              _timeoutMsg.innerHTML = '<div class="role">Shirabi</div><div class="body" style="opacity:0.6;font-style:italic;">Research clarification timed out. Toggle research again to start over.</div>';
               _box.appendChild(_timeoutMsg);
               uiModule.scrollHistory();
             }
@@ -4786,7 +4783,7 @@ import createResearchSynapse from './researchSynapse.js';
   // streaming, history-rendered, compare-mode, all of them. Re-attaching
   // per-node listeners on every innerHTML rewrite was the source of the
   // "needs many clicks" bug.
-  if (!window.__shirabe_thread_click_bound) {
+  if (!window.__shirabi_thread_click_bound) {
     document.body.addEventListener('click', (e) => {
       const header = e.target.closest('.agent-thread-header');
       if (!header) return;
@@ -4794,7 +4791,7 @@ import createResearchSynapse from './researchSynapse.js';
       if (!node) return;
       node.classList.toggle('open');
     });
-    window.__shirabe_thread_click_bound = true;
+    window.__shirabi_thread_click_bound = true;
   }
 
   export default chatModule;

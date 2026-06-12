@@ -45,10 +45,10 @@ from routes.cookbook_helpers import (
 
 _HF_TOKEN_STATUS_SNIPPET = (
     'if [ -n "$HF_TOKEN" ]; then '
-    'echo "[shirabe] HF token: applied"; '
+    'echo "[shirabi] HF token: applied"; '
     'else '
-    'echo "[shirabe] HF token: NOT SET — gated/private models will be denied. '
-    'Add one in Shirabe Settings -> Cookbook -> HuggingFace Token."; '
+    'echo "[shirabi] HF token: NOT SET — gated/private models will be denied. '
+    'Add one in Shirabi Settings -> Cookbook -> HuggingFace Token."; '
     'fi'
 )
 
@@ -283,7 +283,7 @@ def setup_cookbook_routes() -> APIRouter:
             # which_tool so the .exe is found even when PATHEXT is unusual.
             ssh_keygen = which_tool("ssh-keygen") or "ssh-keygen"
             proc = await asyncio.create_subprocess_exec(
-                ssh_keygen, "-t", "ed25519", "-N", "", "-C", "shirabe-cookbook", "-f", str(key_path),
+                ssh_keygen, "-t", "ed25519", "-N", "", "-C", "shirabi-cookbook", "-f", str(key_path),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -433,7 +433,7 @@ def setup_cookbook_routes() -> APIRouter:
             lines.append(f"export HF_TOKEN='{_bash_squote(req.hf_token)}'")
         # Ensure pip-user scripts (e.g. hf CLI installed via --user) are on PATH
         lines.append('export PATH="$HOME/.local/bin:$PATH"')
-        # When Shirabe runs from a venv (e.g. native macOS install), put its bin
+        # When Shirabi runs from a venv (e.g. native macOS install), put its bin
         # on PATH so the tmux shell finds the bundled `hf`/`python3` without an
         # activated venv. Local bash runs only — meaningless over SSH.
         if not req.remote_host:
@@ -470,7 +470,7 @@ def setup_cookbook_routes() -> APIRouter:
             # ── Windows remote: generate .ps1 runner, use Start-Process for background ──
             remote_runner = f".{session_id}_run.ps1"
             ps_lines = []
-            ps_lines.append('$sessionDir = "$env:TEMP\\shirabe-sessions"')
+            ps_lines.append('$sessionDir = "$env:TEMP\\shirabi-sessions"')
             ps_lines.append('New-Item -ItemType Directory -Force -Path $sessionDir | Out-Null')
             if req.hf_token:
                 ps_lines.append(f"$env:HF_TOKEN = '{_ps_squote(req.hf_token)}'")
@@ -511,7 +511,7 @@ def setup_cookbook_routes() -> APIRouter:
             _pf = f"-p {_port} " if _port and _port != "22" else ""
             # Start-Process creates a fully detached process that survives SSH disconnect
             launch_ps = (
-                "$sd = \\\"$env:TEMP\\shirabe-sessions\\\"; "
+                "$sd = \\\"$env:TEMP\\shirabi-sessions\\\"; "
                 f"Start-Process powershell -ArgumentList '-ExecutionPolicy','Bypass','-File','$HOME\\{remote_runner}' "
                 f"-RedirectStandardOutput \\\"$sd\\{session_id}.log\\\" "
                 f"-RedirectStandardError \\\"$sd\\{session_id}.err.log\\\" "
@@ -693,7 +693,7 @@ def setup_cookbook_routes() -> APIRouter:
                 cwd=str(Path.home()),
             )
         else:
-            # LOCAL scan: use sys.executable (the venv Python Shirabe is already
+            # LOCAL scan: use sys.executable (the venv Python Shirabi is already
             # running under) — it's guaranteed real Python on all platforms.
             # Falling back to which_tool on Windows risks hitting the Microsoft
             # Store stub alias for "python3"/"python", which prints
@@ -886,7 +886,7 @@ def setup_cookbook_routes() -> APIRouter:
             port = 8080  # llama.cpp's llama-server default — the Apple Silicon path
 
         # Determine host (mirrors the image path: SSH alias for remote serves).
-        # For local serves while Shirabe runs inside Docker, "localhost"
+        # For local serves while Shirabi runs inside Docker, "localhost"
         # resolves to the container itself — useless. Use host.docker.internal
         # which compose maps to the actual host, matching what /setup adds
         # for Ollama by hand.
@@ -1026,7 +1026,7 @@ def setup_cookbook_routes() -> APIRouter:
             # ── Windows remote: generate .ps1 serve runner ──
             remote_runner = f".{session_id}_run.ps1"
             ps_lines = []
-            ps_lines.append('$sessionDir = "$env:TEMP\\shirabe-sessions"')
+            ps_lines.append('$sessionDir = "$env:TEMP\\shirabi-sessions"')
             ps_lines.append('New-Item -ItemType Directory -Force -Path $sessionDir | Out-Null')
             if req.hf_token:
                 ps_lines.append(f"$env:HF_TOKEN = '{_ps_squote(req.hf_token)}'")
@@ -1063,7 +1063,7 @@ def setup_cookbook_routes() -> APIRouter:
             _Pf = f"-P {_port} " if _port and _port != "22" else ""
             _pf = f"-p {_port} " if _port and _port != "22" else ""
             launch_ps = (
-                "$sd = \\\"$env:TEMP\\shirabe-sessions\\\"; "
+                "$sd = \\\"$env:TEMP\\shirabi-sessions\\\"; "
                 f"Start-Process powershell -ArgumentList '-ExecutionPolicy','Bypass','-File','$HOME\\{remote_runner}' "
                 f"-RedirectStandardOutput \\\"$sd\\{session_id}.log\\\" "
                 f"-RedirectStandardError \\\"$sd\\{session_id}.err.log\\\" "
@@ -1086,14 +1086,14 @@ def setup_cookbook_routes() -> APIRouter:
             # the post-crash interactive shell's neofetch banner ALSO gets
             # teed into the log file and `tail -N` returns ONLY the banner —
             # the actual traceback ends up earlier than the tail window.
-            runner_lines.append("mkdir -p /tmp/shirabe-tmux 2>/dev/null || true")
+            runner_lines.append("mkdir -p /tmp/shirabi-tmux 2>/dev/null || true")
             runner_lines.append("exec 3>&1 4>&2")
             runner_lines.append(
-                f"exec > >(tee -a /tmp/shirabe-tmux/{session_id}.log) 2>&1"
+                f"exec > >(tee -a /tmp/shirabi-tmux/{session_id}.log) 2>&1"
             )
             runner_lines.extend(_user_shell_path_bootstrap())
-            runner_lines.append('SHIRABE_PREFLIGHT_EXIT=""')
-            # Put Shirabe's own venv bin on PATH (local runs only) so the serve
+            runner_lines.append('SHIRABI_PREFLIGHT_EXIT=""')
+            # Put Shirabi's own venv bin on PATH (local runs only) so the serve
             # shell resolves the bundled python3/hf, mirroring the download flow.
             if not remote:
                 runner_lines.append(_local_tooling_path_export(sys.executable))
@@ -1157,7 +1157,7 @@ def setup_cookbook_routes() -> APIRouter:
                 runner_lines.append('  fi')
                 runner_lines.append('  if ! command -v llama-server &>/dev/null && ! python3 -c "import llama_cpp" 2>/dev/null; then')
                 runner_lines.append('    echo "ERROR: llama.cpp serving is not available after install/build attempts."')
-                runner_lines.append('    SHIRABE_PREFLIGHT_EXIT=127')
+                runner_lines.append('    SHIRABI_PREFLIGHT_EXIT=127')
                 runner_lines.append('  fi')
                 runner_lines.append('fi')
             elif "ollama" in req.cmd:
@@ -1172,13 +1172,13 @@ def setup_cookbook_routes() -> APIRouter:
                 # ollama on 11434), scan upward for a free one rather than
                 # silently reattaching to an external service that Stop
                 # can't reach.
-                runner_lines.append(f'SHIRABE_OLLAMA_HOST={_bash_squote(_ollama_host)}')
-                runner_lines.append(f'SHIRABE_OLLAMA_PORT="{_ollama_port}"')
+                runner_lines.append(f'SHIRABI_OLLAMA_HOST={_bash_squote(_ollama_host)}')
+                runner_lines.append(f'SHIRABI_OLLAMA_PORT="{_ollama_port}"')
                 runner_lines.append('for _ody_off in 0 1 2 3 4 5 6 7 8 9; do')
-                runner_lines.append('  _ody_try_port=$((SHIRABE_OLLAMA_PORT + _ody_off))')
+                runner_lines.append('  _ody_try_port=$((SHIRABI_OLLAMA_PORT + _ody_off))')
                 runner_lines.append('  if ! (exec 3<>/dev/tcp/127.0.0.1/$_ody_try_port) 2>/dev/null; then')
                 runner_lines.append('    exec 3<&-; exec 3>&-')
-                runner_lines.append('    SHIRABE_OLLAMA_PORT="$_ody_try_port"')
+                runner_lines.append('    SHIRABI_OLLAMA_PORT="$_ody_try_port"')
                 runner_lines.append('    break')
                 runner_lines.append('  fi')
                 runner_lines.append('  exec 3<&-; exec 3>&-')
@@ -1189,12 +1189,12 @@ def setup_cookbook_routes() -> APIRouter:
                 runner_lines.append('  echo "=== Process exited with code 127 ==="')
                 runner_lines.append('  exec bash -i')
                 runner_lines.append('fi')
-                runner_lines.append('SHIRABE_OLLAMA_URL="http://${SHIRABE_OLLAMA_HOST}:${SHIRABE_OLLAMA_PORT}"')
+                runner_lines.append('SHIRABI_OLLAMA_URL="http://${SHIRABI_OLLAMA_HOST}:${SHIRABI_OLLAMA_PORT}"')
                 if remote and _ollama_host in ("0.0.0.0", "::"):
-                    runner_lines.append('echo "[shirabe] WARNING: remote Ollama will bind to ${SHIRABE_OLLAMA_HOST}:${SHIRABE_OLLAMA_PORT} so Shirabe can reach it from this host."')
-                    runner_lines.append('echo "[shirabe] Ollama has no built-in authentication; expose this only on a trusted LAN/VPN or provide an explicit OLLAMA_HOST with your own access controls."')
-                runner_lines.append('echo "Starting ollama server on ${SHIRABE_OLLAMA_HOST}:${SHIRABE_OLLAMA_PORT}..."')
-                runner_lines.append('OLLAMA_HOST="${SHIRABE_OLLAMA_HOST}:${SHIRABE_OLLAMA_PORT}" ollama serve')
+                    runner_lines.append('echo "[shirabi] WARNING: remote Ollama will bind to ${SHIRABI_OLLAMA_HOST}:${SHIRABI_OLLAMA_PORT} so Shirabi can reach it from this host."')
+                    runner_lines.append('echo "[shirabi] Ollama has no built-in authentication; expose this only on a trusted LAN/VPN or provide an explicit OLLAMA_HOST with your own access controls."')
+                runner_lines.append('echo "Starting ollama server on ${SHIRABI_OLLAMA_HOST}:${SHIRABI_OLLAMA_PORT}..."')
+                runner_lines.append('OLLAMA_HOST="${SHIRABI_OLLAMA_HOST}:${SHIRABI_OLLAMA_PORT}" ollama serve')
                 runner_lines.append('_ody_exit=$?')
                 runner_lines.append('echo')
                 runner_lines.append('echo "=== Process exited with code ${_ody_exit} ==="')
@@ -1203,7 +1203,7 @@ def setup_cookbook_routes() -> APIRouter:
                 # vLLM is CUDA/ROCm-only and does not run on macOS at all.
                 runner_lines.append('if [ "$(uname -s)" = "Darwin" ]; then')
                 runner_lines.append('  echo "ERROR: vLLM does not run on macOS. Use Ollama or llama.cpp (Metal) instead."')
-                runner_lines.append('  SHIRABE_PREFLIGHT_EXIT=1')
+                runner_lines.append('  SHIRABI_PREFLIGHT_EXIT=1')
                 runner_lines.append('fi')
                 # Put ~/.local/bin on PATH first — without a venv, vllm installs
                 # there via --user and the non-login serve shell otherwise can't
@@ -1211,24 +1211,24 @@ def setup_cookbook_routes() -> APIRouter:
                 runner_lines.append('export PATH="$HOME/.local/bin:$PATH"')
                 runner_lines.append('if ! command -v vllm &>/dev/null; then')
                 runner_lines.append('  echo "ERROR: vLLM is not installed."')
-                runner_lines.append('  SHIRABE_PREFLIGHT_EXIT=127')
+                runner_lines.append('  SHIRABI_PREFLIGHT_EXIT=127')
                 runner_lines.append('fi')
             elif "sglang.launch_server" in req.cmd:
                 runner_lines.append('export PATH="$HOME/.local/bin:$PATH"')
                 runner_lines.append('if ! command -v sglang &>/dev/null; then')
                 runner_lines.append('  echo "ERROR: SGLang is not installed."')
-                runner_lines.append('  SHIRABE_PREFLIGHT_EXIT=127')
-                runner_lines.append('elif ! SHIRABE_SGLANG_IMPORT_ERROR="$(python3 -c "import sglang" 2>&1)"; then')
+                runner_lines.append('  SHIRABI_PREFLIGHT_EXIT=127')
+                runner_lines.append('elif ! SHIRABI_SGLANG_IMPORT_ERROR="$(python3 -c "import sglang" 2>&1)"; then')
                 runner_lines.append('  echo "ERROR: SGLang is installed but failed to import."')
-                runner_lines.append('  printf "%s\\n" "$SHIRABE_SGLANG_IMPORT_ERROR"')
-                runner_lines.append('  SHIRABE_PREFLIGHT_EXIT=127')
+                runner_lines.append('  printf "%s\\n" "$SHIRABI_SGLANG_IMPORT_ERROR"')
+                runner_lines.append('  SHIRABI_PREFLIGHT_EXIT=127')
                 runner_lines.append('fi')
             elif "scripts/diffusion_server.py" in req.cmd or ".diffusion_server.py" in req.cmd:
                 runner_lines.append('export PATH="$HOME/.local/bin:$PATH"')
-                runner_lines.append('if ! SHIRABE_DIFFUSION_IMPORT_ERROR="$(python3 -c "import torch, diffusers" 2>&1)"; then')
+                runner_lines.append('if ! SHIRABI_DIFFUSION_IMPORT_ERROR="$(python3 -c "import torch, diffusers" 2>&1)"; then')
                 runner_lines.append('  echo "ERROR: Diffusion serving requires PyTorch + diffusers."')
-                runner_lines.append('  printf "%s\\n" "$SHIRABE_DIFFUSION_IMPORT_ERROR"')
-                runner_lines.append('  SHIRABE_PREFLIGHT_EXIT=127')
+                runner_lines.append('  printf "%s\\n" "$SHIRABI_DIFFUSION_IMPORT_ERROR"')
+                runner_lines.append('  SHIRABI_PREFLIGHT_EXIT=127')
                 runner_lines.append('fi')
 
             if not handled_ollama_serve:
@@ -1380,7 +1380,7 @@ def setup_cookbook_routes() -> APIRouter:
             # Also create the session directory for background tasks
             setup_script = (
                 'powershell -Command "'
-                "New-Item -ItemType Directory -Force -Path $env:TEMP\\shirabe-sessions | Out-Null; "
+                "New-Item -ItemType Directory -Force -Path $env:TEMP\\shirabi-sessions | Out-Null; "
                 "try { python --version } catch { Write-Host 'ERROR: Python not found — install from python.org'; exit 1 }; "
                 "python -m pip install -q huggingface-hub 2>$null; "
                 "python -c \\\"from huggingface_hub import snapshot_download; print('OK')\\\""
@@ -2283,7 +2283,7 @@ def setup_cookbook_routes() -> APIRouter:
                 continue
             if task_platform == "windows" and remote:
                 # Windows: check PID file + Get-Process, read log tail
-                sd = "$env:TEMP\\shirabe-sessions"
+                sd = "$env:TEMP\\shirabi-sessions"
                 ssh_base = ["ssh"]
                 if _tport and _tport != "22":
                     ssh_base.extend(["-p", str(_tport)])
@@ -2308,7 +2308,7 @@ def setup_cookbook_routes() -> APIRouter:
                 # Capture 500 lines (was 50) so a Python traceback survives
                 # the post-crash neofetch banner + bash prompt that otherwise
                 # fills the visible tail. Without this, output_tail ends up
-                # as just "Locale: C / Ubuntu_Shirabe ❯" and the agent
+                # as just "Locale: C / Ubuntu_Shirabi ❯" and the agent
                 # can't diagnose the actual error.
                 capture_cmd = ssh_base + [remote, "tmux", "capture-pane", "-t", session_id, "-p", "-S", "-500"]
             elif IS_WINDOWS:

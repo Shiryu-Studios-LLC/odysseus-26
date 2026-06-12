@@ -1,4 +1,4 @@
-// Shirabe UI — Initialization Scripts
+﻿// Shirabi UI — Initialization Scripts
 // ES6 module — extracted from index.html inline scripts
 
 import Storage from './storage.js';
@@ -31,10 +31,10 @@ window.addEventListener('pageshow', clearFreshComposerRestore);
     const data = await res.json().catch(() => ({}));
     const liveUser = (data && data.username) || '';
     if (!liveUser) return;
-    const KEY = 'shirabe-auth-user';
+    const KEY = 'shirabi-auth-user';
     const cachedUser = localStorage.getItem(KEY);
     if (cachedUser && cachedUser !== liveUser) {
-      const _keepKeys = new Set(['shirabe-last-user', KEY]);
+      const _keepKeys = new Set(['shirabi-last-user', KEY]);
       const toRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);

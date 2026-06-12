@@ -1,22 +1,22 @@
 {
-  "name": "shirabe",
+  "name": "shirabi",
   "version": "0.1.1",
-  "description": "Connect Codex to a scoped Shirabe instance.",
+  "description": "Connect Codex to a scoped Shirabi instance.",
   "author": {
-    "name": "Shirabe"
+    "name": "Shirabi"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "Shirabe",
-    "shortDescription": "Use scoped Shirabe tools from Codex.",
-    "longDescription": "Connects Codex terminal sessions to Shirabe through user-controlled scoped API tokens. Codex must use /api/codex/* endpoints so Shirabe Settings can enforce tool access.",
-    "developerName": "Shirabe",
+    "displayName": "Shirabi",
+    "shortDescription": "Use scoped Shirabi tools from Codex.",
+    "longDescription": "Connects Codex terminal sessions to Shirabi through user-controlled scoped API tokens. Codex must use /api/codex/* endpoints so Shirabi Settings can enforce tool access.",
+    "developerName": "Shirabi",
     "category": "Productivity",
     "capabilities": [
       "todos",
       "email",
       "scoped-api"
     ],
-    "defaultPrompt": "Use Shirabe only through configured scoped access. Check capabilities before reading or writing data."
+    "defaultPrompt": "Use Shirabi only through configured scoped access. Check capabilities before reading or writing data."
   }
 }

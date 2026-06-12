@@ -13,8 +13,8 @@ from starlette.responses import Response
 # routes via HTTP loopback (the agent's tool calls don't carry the
 # admin user's session cookie). Set once at import; tools read the
 # same value from this module. Never persisted or exposed externally.
-INTERNAL_TOOL_TOKEN = os.environ.get("SHIRABE_INTERNAL_TOKEN") or secrets.token_hex(32)
-INTERNAL_TOOL_HEADER = "X-Shirabe-Internal-Token"
+INTERNAL_TOOL_TOKEN = os.environ.get("SHIRABI_INTERNAL_TOKEN") or secrets.token_hex(32)
+INTERNAL_TOOL_HEADER = "X-Shirabi-Internal-Token"
 
 
 def require_admin(request: Request):
@@ -23,7 +23,7 @@ def require_admin(request: Request):
     the in-process internal-tool token used by loopback agent tools.
     """
     # In-process bypass for tool-layer loopback calls. Two paths:
-    # (a) header-direct (caller set X-Shirabe-Internal-Token), or
+    # (a) header-direct (caller set X-Shirabi-Internal-Token), or
     # (b) the auth middleware already validated the token and stamped
     #     request.state.current_user = "internal-tool".
     try:
@@ -49,6 +49,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add standard security headers to all responses."""
 
     async def dispatch(self, request: Request, call_next) -> Response:
+        # BaseHTTPMiddleware breaks WebSocket upgrades — pass them through
+        if request.scope.get("type") == "websocket":
+            return await call_next(request)
         # Generate a per-request nonce for inline scripts
         nonce = secrets.token_hex(16)
         request.state.csp_nonce = nonce

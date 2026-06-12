@@ -1,4 +1,4 @@
-// static/js/markdown.js
+﻿// static/js/markdown.js
 
 /**
  * Markdown rendering and content processing utilities
@@ -765,11 +765,11 @@ export default markdownModule;
 
 // Mermaid is loaded async so it cannot delay the app shell.
 function initMermaid() {
-  if (!window.mermaid || window.__shirabeMermaidReady) return;
+  if (!window.mermaid || window.__shirabiMermaidReady) return;
   window.mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
-  window.__shirabeMermaidReady = true;
+  window.__shirabiMermaidReady = true;
 }
-window.shirabeInitMermaid = initMermaid;
+window.shirabiInitMermaid = initMermaid;
 initMermaid();
 
 // Persist which thinking sections were expanded across page refreshes.
@@ -777,7 +777,7 @@ initMermaid();
 // the inner text content instead — same content reproduces the same hash on
 // reload. LocalStorage holds a Set of expanded hashes; we observe the chat
 // history and re-expand matching sections as they're inserted.
-const THINK_EXPANDED_KEY = 'shirabe-thinking-expanded';
+const THINK_EXPANDED_KEY = 'shirabi-thinking-expanded';
 function _loadExpandedSet() {
   try { return new Set(JSON.parse(localStorage.getItem(THINK_EXPANDED_KEY) || '[]')); }
   catch { return new Set(); }

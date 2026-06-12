@@ -1,22 +1,22 @@
 #!/bin/bash
-# Build a downloadable macOS launcher app + .dmg for Shirabe.
+# Build a downloadable macOS launcher app + .dmg for Shirabi.
 #
 #   ./build-macos-app.sh
 #
 # Produces:
-#   dist/Shirabe.app   — double-click: starts the local server (using this
+#   dist/Shirabi.app   — double-click: starts the local server (using this
 #                         repo's venv) and opens the UI in an app-style window.
-#   dist/Shirabe.dmg   — drag-to-Applications disk image (the downloadable).
+#   dist/Shirabi.dmg   — drag-to-Applications disk image (the downloadable).
 #
 # This is a *launcher* wrapper: it drives the venv we set up in this repo, it
 # does not bundle Python. The install path is baked into the app at build time,
-# so rebuild if you move the repo. Override the port with SHIRABE_PORT.
+# so rebuild if you move the repo. Override the port with SHIRABI_PORT.
 set -e
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_NAME="Shirabe"
+APP_NAME="Shirabi"
 INSTALL_DIR="$REPO_DIR"
-PORT="${SHIRABE_PORT:-7860}"
+PORT="${SHIRABI_PORT:-7860}"
 DIST="$REPO_DIR/dist"
 APP="$DIST/$APP_NAME.app"
 
@@ -27,22 +27,22 @@ echo "  port:        $PORT"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
-# ── Icon (best effort) — center-crop docs/shirabe.jpg to a square .icns ──
-if [ -f "$REPO_DIR/docs/shirabe.jpg" ] && command -v sips >/dev/null 2>&1; then
+# ── Icon (best effort) — center-crop docs/shirabi.jpg to a square .icns ──
+if [ -f "$REPO_DIR/docs/shirabi.jpg" ] && command -v sips >/dev/null 2>&1; then
   TMPIMG="$(mktemp -d)"
   # Center-crop to a square, scale to 512 (sips' icns encoder caps at 512), and
   # let sips emit the .icns directly — more robust across macOS versions than
   # building an .iconset by hand.
-  sips -c 720 720 "$REPO_DIR/docs/shirabe.jpg" --out "$TMPIMG/sq.png" >/dev/null 2>&1 || cp "$REPO_DIR/docs/shirabe.jpg" "$TMPIMG/sq.png"
+  sips -c 720 720 "$REPO_DIR/docs/shirabi.jpg" --out "$TMPIMG/sq.png" >/dev/null 2>&1 || cp "$REPO_DIR/docs/shirabi.jpg" "$TMPIMG/sq.png"
   sips -z 512 512 "$TMPIMG/sq.png" --out "$TMPIMG/icon.png" >/dev/null 2>&1
-  if sips -s format icns "$TMPIMG/icon.png" --out "$APP/Contents/Resources/shirabe.icns" >/dev/null 2>&1; then
-    echo "  icon:        shirabe.icns"
+  if sips -s format icns "$TMPIMG/icon.png" --out "$APP/Contents/Resources/shirabi.icns" >/dev/null 2>&1; then
+    echo "  icon:        shirabi.icns"
   else
     echo "  icon:        (skipped — conversion failed)"
   fi
   rm -rf "$TMPIMG"
 else
-  echo "  icon:        (skipped — no docs/shirabe.jpg)"
+  echo "  icon:        (skipped — no docs/shirabi.jpg)"
 fi
 
 # ── Info.plist ──
@@ -53,12 +53,12 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <dict>
     <key>CFBundleName</key>            <string>$APP_NAME</string>
     <key>CFBundleDisplayName</key>     <string>$APP_NAME</string>
-    <key>CFBundleIdentifier</key>      <string>com.shirabe.launcher</string>
+    <key>CFBundleIdentifier</key>      <string>com.shirabi.launcher</string>
     <key>CFBundleVersion</key>         <string>1.0</string>
     <key>CFBundleShortVersionString</key><string>1.0</string>
     <key>CFBundlePackageType</key>     <string>APPL</string>
     <key>CFBundleExecutable</key>      <string>$APP_NAME</string>
-    <key>CFBundleIconFile</key>        <string>shirabe</string>
+    <key>CFBundleIconFile</key>        <string>shirabi</string>
     <key>LSMinimumSystemVersion</key>  <string>11.0</string>
     <key>NSHighResolutionCapable</key> <true/>
     <key>LSUIElement</key>             <false/>
@@ -69,22 +69,22 @@ PLIST
 # ── Launcher executable (placeholders filled below) ──
 cat > "$APP/Contents/MacOS/$APP_NAME.tmpl" <<'LAUNCHER'
 #!/bin/bash
-# Shirabe.app — start the local server and open the UI in an app window.
+# Shirabi.app — start the local server and open the UI in an app window.
 INSTALL_DIR="__INSTALL_DIR__"
 PORT="__PORT__"
 URL="http://127.0.0.1:${PORT}"
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 
 UVICORN="$INSTALL_DIR/venv/bin/uvicorn"
-LOG="$INSTALL_DIR/logs/shirabe-app.log"
+LOG="$INSTALL_DIR/logs/shirabi-app.log"
 
-notify() { /usr/bin/osascript -e "display notification \"$1\" with title \"Shirabe\"" >/dev/null 2>&1; }
+notify() { /usr/bin/osascript -e "display notification \"$1\" with title \"Shirabi\"" >/dev/null 2>&1; }
 die_gui() {
-  /usr/bin/osascript -e "display dialog \"$1\" with title \"Shirabe\" buttons {\"OK\"} default button 1 with icon stop" >/dev/null 2>&1
+  /usr/bin/osascript -e "display dialog \"$1\" with title \"Shirabi\" buttons {\"OK\"} default button 1 with icon stop" >/dev/null 2>&1
   exit 1
 }
 
-[ -x "$UVICORN" ] || die_gui "Shirabe isn't set up yet. Open Terminal and run:
+[ -x "$UVICORN" ] || die_gui "Shirabi isn't set up yet. Open Terminal and run:
 
 cd $INSTALL_DIR
 python3.11 -m venv venv
@@ -133,7 +133,7 @@ trap 'kill $SERVER_PID 2>/dev/null; exit 0' TERM INT
 READY=0
 for i in $(seq 1 120); do
   /usr/bin/curl -s -o /dev/null --max-time 2 "$URL" && { READY=1; break; }
-  kill -0 "$SERVER_PID" 2>/dev/null || die_gui "Shirabe failed to start. Log:
+  kill -0 "$SERVER_PID" 2>/dev/null || die_gui "Shirabi failed to start. Log:
 $LOG"
   sleep 1
 done
@@ -141,7 +141,7 @@ done
 if [ "$READY" = "1" ]; then
   open_ui
 else
-  notify "Shirabe is taking a while — open $URL once it finishes starting."
+  notify "Shirabi is taking a while — open $URL once it finishes starting."
 fi
 wait "$SERVER_PID"
 LAUNCHER
@@ -170,4 +170,4 @@ echo "  $APP"
 echo "  $DIST/$APP_NAME.dmg"
 echo ""
 echo "Run it:        open '$APP'"
-echo "Install:       open '$DIST/$APP_NAME.dmg'  (drag Shirabe to Applications)"
+echo "Install:       open '$DIST/$APP_NAME.dmg'  (drag Shirabi to Applications)"

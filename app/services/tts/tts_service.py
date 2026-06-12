@@ -39,6 +39,11 @@ class TTSService:
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self._kokoro = None  # lazy-init
+        # Persistent HTTP client for connection reuse (keep-alive)
+        self._http_client = httpx.Client(
+            timeout=httpx.Timeout(connect=10, read=60, write=10, pool=10),
+            limits=httpx.Limits(max_connections=5, max_keepalive_connections=2),
+        )
 
     # ── Settings ──
 
@@ -117,6 +122,11 @@ class TTSService:
         finally:
             db.close()
 
+        # GPT-SoVITS uses /tts endpoint, not OpenAI's /audio/speech
+        if "/v1" in base_url and ("sovits" in ep.name.lower() or voice == "shirabi_local"):
+            return self._synthesize_gptsovits(text, base_url, speed)
+
+        # Standard OpenAI-compatible endpoint
         url = base_url + "/audio/speech"
         headers = {"Content-Type": "application/json"}
         if api_key:
@@ -131,12 +141,54 @@ class TTSService:
         }
 
         try:
-            r = httpx.post(url, json=payload, headers=headers, timeout=60)
+            r = self._http_client.post(url, json=payload, headers=headers)
             r.raise_for_status()
             logger.info(f"API TTS: {len(r.content)} bytes from {base_url}")
             return r.content
         except Exception as e:
             logger.error(f"API TTS synthesis failed: {e}")
+            return None
+
+    def _apply_pronunciation_fixes(self, text: str) -> str:
+        """Fix common mispronunciations in text before sending to GPT-SoVITS."""
+        fixes = [
+            ("Shirabi", "shee-rah-bee"),
+            ("shirabi", "shee-rah-bee"),
+            ("SHIRABI", "shee-rah-bee"),
+        ]
+        for wrong, right in fixes:
+            text = text.replace(wrong, right)
+        return text
+
+    def _synthesize_gptsovits(self, text: str, base_url: str, speed: float = 1.0) -> Optional[bytes]:
+        """Synthesize using GPT-SoVITS API v1 root endpoint."""
+        # Fix mispronunciations before synthesis
+        text = self._apply_pronunciation_fixes(text)
+
+        # Use a reference audio from the dataset
+        ref_audio = r"I:\Shirabi26\Resoruces\Elevenlabs\dataset\clip_005.mp3"
+        ref_text = "Hello again. I have everything ready for your next task."
+
+        # Strip /v1 from base URL for GPT-SoVITS
+        tts_url = base_url.replace("/v1", "") + "/"
+
+        payload = {
+            "refer_wav_path": ref_audio,
+            "prompt_text": ref_text,
+            "prompt_language": "en",
+            "text": text,
+            "text_language": "en",
+            "media_type": "wav",
+            "streaming_mode": False,
+        }
+
+        try:
+            r = self._http_client.post(tts_url, json=payload)
+            r.raise_for_status()
+            logger.info(f"GPT-SoVITS TTS: {len(r.content)} bytes from {tts_url}")
+            return r.content
+        except Exception as e:
+            logger.error(f"GPT-SoVITS synthesis failed: {e}")
             return None
 
     # ── Public interface ──
@@ -227,10 +279,10 @@ class TTSService:
 
 
 class _KokoroPipeline:
-    """Encapsulates the Kokoro-82M local GPU pipeline."""
+    """Encapsulates the Kokoro-82M local GPU pipeline with multi-language support."""
 
     def __init__(self):
-        self.pipeline = None
+        self.pipelines = {}
         self.available = False
         self.device = None
         self._init()
@@ -238,24 +290,38 @@ class _KokoroPipeline:
     def _init(self):
         try:
             import torch
-            from kokoro import KPipeline
-
             if not torch.cuda.is_available():
                 logger.warning("CUDA not available for Kokoro TTS")
                 return
 
             self.device = torch.device("cuda:0")
-            with torch.cuda.device(0):
-                self.pipeline = KPipeline(lang_code="a")
-                if hasattr(self.pipeline, "model"):
-                    self.pipeline.model = self.pipeline.model.to(self.device)
             self.available = True
-            logger.info("Kokoro-82M TTS pipeline loaded")
+            logger.info("Kokoro-82M TTS engine initialized on GPU")
         except ImportError as e:
             logger.warning(f"Kokoro TTS not available: {e}")
             logger.warning("Install with: pip install kokoro soundfile")
         except Exception as e:
             logger.error(f"Kokoro init failed: {e}", exc_info=True)
+
+    def _get_pipeline(self, lang_code: str):
+        if not self.available:
+            return None
+        if lang_code in self.pipelines:
+            return self.pipelines[lang_code]
+
+        try:
+            import torch
+            from kokoro import KPipeline
+            logger.info(f"Loading Kokoro-82M pipeline for language: {lang_code}")
+            with torch.cuda.device(0):
+                pipeline = KPipeline(lang_code=lang_code)
+                if hasattr(pipeline, "model"):
+                    pipeline.model = pipeline.model.to(self.device)
+                self.pipelines[lang_code] = pipeline
+                return pipeline
+        except Exception as e:
+            logger.error(f"Failed to load Kokoro pipeline for {lang_code}: {e}")
+            return None
 
     def synthesize_raw(self, text: str, voice: str = "af_heart") -> Optional[bytes]:
         if not self.available:
@@ -264,9 +330,20 @@ class _KokoroPipeline:
             import torch
             import numpy as np
 
+            # Map voice prefix to language code
+            lang_code = "a"
+            if voice and len(voice) > 0:
+                prefix = voice[0].lower()
+                if prefix in ["a", "b", "j", "z", "e", "f", "i", "p"]:
+                    lang_code = prefix
+
+            pipeline = self._get_pipeline(lang_code)
+            if pipeline is None:
+                return None
+
             with torch.cuda.device(self.device):
                 chunks = []
-                for _, _, audio in self.pipeline(text, voice=voice):
+                for _, _, audio in pipeline(text, voice=voice):
                     chunks.append(audio)
 
             if not chunks:

@@ -2499,7 +2499,7 @@ def _internal_headers(owner: Optional[str] = None) -> Dict[str, str]:
     from core.middleware import INTERNAL_TOOL_HEADER, INTERNAL_TOOL_TOKEN
     headers = {INTERNAL_TOOL_HEADER: INTERNAL_TOOL_TOKEN}
     if owner:
-        headers["X-Shirabe-Owner"] = owner
+        headers["X-Shirabi-Owner"] = owner
     return headers
 
 
@@ -2734,7 +2734,7 @@ _APP_API_BLOCKLIST_METHOD_PATH = (
 
 
 async def do_app_api(content: str, owner: Optional[str] = None) -> Dict:
-    """Generic loopback to any internal Shirabe API endpoint. Lets the
+    """Generic loopback to any internal Shirabi API endpoint. Lets the
     agent reach the full UI-button surface (cookbook, email, notes,
     calendar, skills, sessions, gallery, research, etc.) without us
     landing a named tool wrapper for every one.
@@ -3209,7 +3209,7 @@ async def do_list_served_models(content: str, owner: Optional[str] = None) -> Di
                 # Prefer a window around a Python traceback if one exists,
                 # falling back to the last 30 lines. The previous 6-line
                 # tail showed only the post-crash bash prompt / neofetch
-                # banner ("Locale: C / Ubuntu_Shirabe ❯") — useless for
+                # banner ("Locale: C / Ubuntu_Shirabi ❯") — useless for
                 # diagnosis. The traceback we want is usually 50-200 lines
                 # earlier in the buffer.
                 _tail_lines = tail.splitlines()
@@ -3371,7 +3371,7 @@ async def do_tail_serve_output(content: str, owner: Optional[str] = None) -> Dic
                     if not sport:
                         sport = t.get("sshPort") or ""
                     break
-    # Prefer the persisted /tmp/shirabe-tmux/SESSION.log file over the
+    # Prefer the persisted /tmp/shirabi-tmux/SESSION.log file over the
     # live tmux pane. The pane is what the user would see scrolling on
     # their screen — including the post-crash neofetch banner and the
     # idle bash prompt that overwrites the actual traceback the moment
@@ -3379,7 +3379,7 @@ async def do_tail_serve_output(content: str, owner: Optional[str] = None) -> Dic
     # process and survives the crash unchanged. We only fall back to
     # the pane when the log file doesn't exist (older sessions launched
     # before the tmux+tee wrapper was added).
-    log_path = f"/tmp/shirabe-tmux/{session_id}.log"
+    log_path = f"/tmp/shirabi-tmux/{session_id}.log"
     pane_inner = f"tmux capture-pane -t {shlex.quote(session_id)} -p -S -{tail} 2>/dev/null"
     file_inner = f"tail -n {tail} {shlex.quote(log_path)} 2>/dev/null"
     inner = (

@@ -1544,9 +1544,9 @@ class TaskScheduler:
             msg["From"] = from_addr
             msg["To"] = to_addr
             msg["Subject"] = f"[Task] {task.name}"
-            msg["X-Shirabe-Origin"] = "shirabe-ui"
-            msg["X-Shirabe-Kind"] = "task"
-            msg["X-Shirabe-Ref"] = str(task.id)
+            msg["X-Shirabi-Origin"] = "shirabi-ui"
+            msg["X-Shirabi-Kind"] = "task"
+            msg["X-Shirabi-Ref"] = str(task.id)
             msg.set_content(result or "")
             _send_smtp_message(cfg, from_addr, [to_addr], msg.as_string(), timeout=30)
             logger.info("Task %s emailed result to %s (%sb)", task.id, to_addr, len(result or ""))
@@ -1855,9 +1855,9 @@ class TaskScheduler:
             "subject": f"[Task] {task.name}",
             "body": result,
             "headers": {
-                "X-Shirabe-Origin": "shirabe-ui",
-                "X-Shirabe-Kind": "task",
-                "X-Shirabe-Ref": str(task.id),
+                "X-Shirabi-Origin": "shirabi-ui",
+                "X-Shirabi-Kind": "task",
+                "X-Shirabi-Ref": str(task.id),
             },
         }
         if recipient:

@@ -1,4 +1,4 @@
-// static/js/settings.js — Settings panel module (ES6)
+﻿// static/js/settings.js — Settings panel module (ES6)
 // User-facing preferences: AI models, search, appearance
 
 import uiModule from './ui.js';
@@ -821,19 +821,91 @@ async function initTtsSettings() {
   var speedRow = el('set-ttsSpeedRow');
   var ttsMsg = el('set-ttsSettingsMsg');
   var ttsEnabledToggle = el('set-ttsEnabledToggle');
+  var ttsAutoPlayToggle = el('set-ttsAutoPlayToggle');
   var ttsConfigWrap = provSel ? provSel.closest('div[style*="flex-direction"]') : null;
 
   function isEndpoint() { return provSel.value.startsWith('endpoint:'); }
   function getModel() { return isEndpoint() ? modelSelect.value : modelInput.value; }
-  function getVoice() { return isEndpoint() ? voiceSelect.value : voiceInput.value; }
+  function getVoice() { 
+    var prov = provSel.value;
+    if (prov === 'local' || isEndpoint()) {
+      return voiceSelect.value;
+    }
+    return voiceInput.value; 
+  }
+
+  var lastProv = null;
+  function syncVoiceOptions(prov) {
+    if (prov === lastProv) return;
+    lastProv = prov;
+
+    var currentVoice = voiceSelect.value || '';
+    voiceSelect.innerHTML = ''; // Clear options
+
+    if (prov === 'local') {
+      var kokoroVoices = [
+        { val: 'af_sky', text: 'Sky (Cute & Adorable English)' },
+        { val: 'af_sarah', text: 'Sarah (Bright & Bubbly English)' },
+        { val: 'af_bella', text: 'Bella (Energetic English)' },
+        { val: 'af_nicole', text: 'Nicole (Soft & Sweet English)' },
+        { val: 'af_heart', text: 'Heart (Cozy English - Default)' },
+        { val: 'jf_alpha', text: 'Alpha (Anime Japanese Female)' },
+        { val: 'jf_beta', text: 'Beta (Sweet Japanese Female)' },
+        { val: 'am_adam', text: 'Adam (Male English)' },
+        { val: 'am_michael', text: 'Michael (Male English)' }
+      ];
+      kokoroVoices.forEach(function(v) {
+        var opt = document.createElement('option');
+        opt.value = v.val;
+        opt.textContent = v.text;
+        voiceSelect.appendChild(opt);
+      });
+      var matched = kokoroVoices.some(v => v.val === currentVoice);
+      voiceSelect.value = matched ? currentVoice : 'af_sky';
+    } else if (prov.startsWith('endpoint:')) {
+      var epId = prov.split(':')[1] || '';
+      var epName = provSel.options[provSel.selectedIndex]?.textContent || '';
+      var isSovits = epName.toLowerCase().includes('sovits') || epId === 'd4f24d56';
+      
+      if (isSovits) {
+        // GPT-SoVITS uses reference audio, not voice names
+        var sovitsVoices = [
+          { val: 'shirabi_local', text: 'Shirabi Local (Voice Clone)' }
+        ];
+        sovitsVoices.forEach(function(v) {
+          var opt = document.createElement('option');
+          opt.value = v.val;
+          opt.textContent = v.text;
+          voiceSelect.appendChild(opt);
+        });
+        voiceSelect.value = 'shirabi_local';
+      } else {
+        var openaiVoices = ['Alloy', 'Ash', 'Coral', 'Echo', 'Fable', 'Nova', 'Onyx', 'Sage', 'Shimmer'];
+        openaiVoices.forEach(function(v) {
+          var opt = document.createElement('option');
+          opt.value = v.toLowerCase();
+          opt.textContent = v;
+          voiceSelect.appendChild(opt);
+        });
+        var matched = openaiVoices.some(v => v.toLowerCase() === currentVoice.toLowerCase());
+        voiceSelect.value = matched ? currentVoice.toLowerCase() : 'alloy';
+      }
+    }
+  }
 
   function updateVisibility() {
     var prov = provSel.value;
     modelRow.style.display = prov.startsWith('endpoint:') ? 'flex' : 'none';
     voiceRow.style.display = prov === 'disabled' ? 'none' : 'flex';
     speedRow.style.display = prov === 'disabled' ? 'none' : 'flex';
+    
+    syncVoiceOptions(prov);
+
     if (isEndpoint()) {
       modelSelect.style.display = ''; modelInput.style.display = 'none';
+      voiceSelect.style.display = ''; voiceInput.style.display = 'none';
+    } else if (prov === 'local') {
+      modelSelect.style.display = 'none'; modelInput.style.display = 'none';
       voiceSelect.style.display = ''; voiceInput.style.display = 'none';
     } else {
       modelSelect.style.display = 'none'; modelInput.style.display = '';
@@ -857,10 +929,20 @@ async function initTtsSettings() {
     var settingsRes = await fetch('/api/auth/settings', { credentials: 'same-origin' });
     var settings = await settingsRes.json();
     if (settings.tts_provider) provSel.value = settings.tts_provider;
+    
+    // Sync dropdown options before selecting values
+    syncVoiceOptions(provSel.value);
+    
     if (settings.tts_model) { modelSelect.value = settings.tts_model; modelInput.value = settings.tts_model; }
-    if (settings.tts_voice) { voiceSelect.value = settings.tts_voice; voiceInput.value = settings.tts_voice; }
+    if (settings.tts_voice) {
+      // Only set if the value exists as an option in the current dropdown
+      var hasOption = Array.from(voiceSelect.options).some(o => o.value === settings.tts_voice);
+      if (hasOption) { voiceSelect.value = settings.tts_voice; }
+      voiceInput.value = settings.tts_voice;
+    }
     if (settings.tts_speed) { speedSelect.value = settings.tts_speed; }
     if (ttsEnabledToggle) ttsEnabledToggle.checked = settings.tts_enabled !== false;
+    if (ttsAutoPlayToggle) { ttsAutoPlayToggle.checked = settings.tts_auto_play !== false; if (window.aiTTSManager) window.aiTTSManager.autoPlay = ttsAutoPlayToggle.checked; }
   } catch (e) { console.warn('Failed to load TTS settings', e); }
 
   function syncTtsDisabled() {
@@ -877,9 +959,9 @@ async function initTtsSettings() {
       var enabled = ttsEnabledToggle ? ttsEnabledToggle.checked : true;
       var provider = provSel.value;
       await fetch('/api/auth/settings', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tts_enabled: enabled, tts_provider: provider, tts_model: getModel() || 'tts-1', tts_voice: getVoice() || 'alloy', tts_speed: speedSelect.value || '1' }) });
+        body: JSON.stringify({ tts_enabled: enabled, tts_provider: provider, tts_model: getModel() || 'tts-1', tts_voice: getVoice() || 'alloy', tts_speed: speedSelect.value || '1', tts_auto_play: ttsAutoPlayToggle ? ttsAutoPlayToggle.checked : true }) });
       ttsMsg.textContent = 'Saved'; ttsMsg.style.color = 'var(--fg)'; setTimeout(() => { ttsMsg.textContent = ''; }, 2000);
-      if (window.aiTTSManager) window.aiTTSManager.checkAvailability();
+      if (window.aiTTSManager) { window.aiTTSManager.checkAvailability(); window.aiTTSManager.autoPlay = ttsAutoPlayToggle ? ttsAutoPlayToggle.checked : true; }
 
       // Update overflow button visibility in real-time based on new settings
       var ttsOff = !enabled || provider === 'disabled';
@@ -899,8 +981,9 @@ async function initTtsSettings() {
   provSel.addEventListener('change', function() {
     var prov = provSel.value;
     if (prov === 'local') voiceInput.value = 'af_heart';
-    else if (isEndpoint()) { voiceSelect.value = 'alloy'; modelSelect.value = 'tts-1'; }
+    else if (isEndpoint()) { modelSelect.value = 'tts-1'; }
     else if (prov === 'browser') { voiceInput.value = ''; voiceInput.placeholder = 'OS default voice'; }
+    lastProv = null;
     updateVisibility();
     saveTTS();
   });
@@ -910,6 +993,7 @@ async function initTtsSettings() {
   voiceInput.addEventListener('change', saveTTS);
   speedSelect.addEventListener('change', saveAndClearCache);
   if (ttsEnabledToggle) ttsEnabledToggle.addEventListener('change', function() { syncTtsDisabled(); saveTTS(); });
+  if (ttsAutoPlayToggle) ttsAutoPlayToggle.addEventListener('change', saveTTS);
 
   // Preview / test button
   var previewBtn = el('set-ttsPreviewBtn');
@@ -1061,6 +1145,123 @@ async function initSttSettings() {
   modelInput.addEventListener('change', saveSTT);
   langInput.addEventListener('change', saveSTT);
   if (sttEnabledToggle) sttEnabledToggle.addEventListener('change', function() { syncSttDisabled(); saveSTT(); });
+}
+
+/* ═══════════════════════════════════════════
+   WAKE WORD SETTINGS
+   ═══════════════════════════════════════════ */
+
+async function initWakeWordSettings() {
+  var enableToggle = el('set-wakewordEnabled');
+  var modelInput = el('set-wakewordModelPath');
+  var thresholdInput = el('set-wakewordThreshold');
+  var debounceInput = el('set-wakewordDebounce');
+  var vadInput = el('set-wakewordVAD');
+  var statusMsg = el('set-wakewordStatus');
+  if (!enableToggle) return;
+
+  // Load current settings
+  try {
+    var res = await fetch('/api/auth/settings', { credentials: 'same-origin' });
+    var settings = await res.json();
+    enableToggle.checked = settings.wakeword_enabled === true;
+    if (settings.wakeword_model_path) modelInput.value = settings.wakeword_model_path;
+    if (settings.wakeword_threshold != null) thresholdInput.value = settings.wakeword_threshold;
+    if (settings.wakeword_debounce != null) debounceInput.value = settings.wakeword_debounce;
+    if (settings.wakeword_vad_threshold != null) vadInput.value = settings.wakeword_vad_threshold;
+  } catch (e) { console.warn('Failed to load wake word settings', e); }
+
+  // Check server status
+  try {
+    var st = await fetch('/api/wakeword/status', { credentials: 'same-origin' });
+    var info = await st.json();
+    if (info.running) {
+      statusMsg.textContent = 'Listening';
+      statusMsg.style.color = 'var(--green, #4ade80)';
+    } else if (info.model_path) {
+      statusMsg.textContent = 'Model found — enable to start';
+    } else {
+      statusMsg.textContent = 'No model found — place .onnx in Resoruces/';
+    }
+  } catch (e) { /* service may not be available */ }
+
+  async function save() {
+    var cfg = {
+      wakeword_enabled: enableToggle.checked,
+      wakeword_model_path: modelInput.value.trim(),
+      wakeword_threshold: parseFloat(thresholdInput.value) || 0.5,
+      wakeword_debounce: parseFloat(debounceInput.value) || 2.0,
+      wakeword_vad_threshold: parseFloat(vadInput.value) || 0.5,
+    };
+    try {
+      await fetch('/api/auth/settings', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cfg),
+      });
+      // Start/stop the service
+      if (enableToggle.checked) {
+        await fetch('/api/wakeword/start', { method: 'POST', credentials: 'same-origin' });
+        statusMsg.textContent = 'Listening';
+        statusMsg.style.color = 'var(--green, #4ade80)';
+      } else {
+        await fetch('/api/wakeword/stop', { method: 'POST', credentials: 'same-origin' });
+        statusMsg.textContent = 'Stopped';
+        statusMsg.style.color = '';
+      }
+    } catch (e) {
+      statusMsg.textContent = 'Failed to save';
+      statusMsg.style.color = 'var(--red)';
+    }
+  }
+
+  enableToggle.addEventListener('change', save);
+  modelInput.addEventListener('change', save);
+  thresholdInput.addEventListener('change', save);
+  debounceInput.addEventListener('change', save);
+  vadInput.addEventListener('change', save);
+}
+
+async function initCompanionSettings() {
+  var enableToggle = el('set-companionAutostart');
+  var statusMsg = el('set-companionStatus');
+  var card = el('companion-card');
+  if (!enableToggle || !card) return;
+
+  try {
+    var res = await fetch('/api/auth/settings', { credentials: 'same-origin' });
+    var settings = await res.json();
+    
+    // Always show the companion card if the element exists
+    card.style.display = 'block';
+    enableToggle.checked = settings.companion_autostart === true;
+  } catch (e) {
+    console.warn('Failed to load companion settings', e);
+  }
+
+  async function save() {
+    var cfg = {
+      companion_autostart: enableToggle.checked
+    };
+    try {
+      await fetch('/api/auth/settings', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cfg),
+      });
+      statusMsg.textContent = 'Saved';
+      statusMsg.style.color = 'var(--green, #4ade80)';
+      setTimeout(() => {
+        statusMsg.textContent = '';
+        statusMsg.style.color = '';
+      }, 2000);
+    } catch (e) {
+      statusMsg.textContent = 'Failed to save';
+      statusMsg.style.color = 'var(--red)';
+    }
+  }
+
+  enableToggle.addEventListener('change', save);
 }
 
 /* ═══════════════════════════════════════════
@@ -1664,8 +1865,8 @@ function initAppearance() {
   modalEl.querySelectorAll('[data-privacy-key]').forEach(function(chk) {
     chk.addEventListener('change', function() {
       if (chk.dataset.privacyKey !== 'sensitive-blur') return;
-      localStorage.setItem('shirabe-sensitive-blur', chk.checked ? 'on' : 'off');
-      window.dispatchEvent(new CustomEvent('shirabe-sensitive-blur-change', {
+      localStorage.setItem('shirabi-sensitive-blur', chk.checked ? 'on' : 'off');
+      window.dispatchEvent(new CustomEvent('shirabi-sensitive-blur-change', {
         detail: { enabled: chk.checked }
       }));
     });
@@ -1674,7 +1875,7 @@ function initAppearance() {
   var resetBtn = el('set-uiVisResetBtn');
   if (resetBtn) {
     resetBtn.addEventListener('click', function() {
-      localStorage.removeItem('shirabe-ui-visibility');
+      localStorage.removeItem('shirabi-ui-visibility');
       syncAppearanceCheckboxes();
       syncPrivacyCheckboxes();
       window.applyUIVis({});
@@ -1693,7 +1894,7 @@ function syncAppearanceCheckboxes() {
 
 function syncPrivacyCheckboxes() {
   modalEl.querySelectorAll('[data-privacy-key="sensitive-blur"]').forEach(function(chk) {
-    chk.checked = localStorage.getItem('shirabe-sensitive-blur') === 'on';
+    chk.checked = localStorage.getItem('shirabi-sensitive-blur') === 'on';
   });
 }
 
@@ -1983,7 +2184,7 @@ async function initShortcuts() {
         body: JSON.stringify({ keybinds }),
       });
       // Update global keybinds so they take effect immediately
-      window._shirabeKeybinds = keybinds;
+      window._shirabiKeybinds = keybinds;
       if (uiModule && uiModule.showToast) uiModule.showToast('Shortcut saved');
     } catch (e) {
       console.error('Failed to save keybinds:', e);
@@ -2162,12 +2363,12 @@ function initAccount() {
       // SECURITY: wipe all client-side state on logout so the next user that
       // signs in on this browser doesn't inherit the previous account's
       // session id, last-used model, draft chat input, or any cached lists.
-      // Keep "shirabe-last-user" so the login form remembers the username
+      // Keep "shirabi-last-user" so the login form remembers the username
       // (if "Remember me" was on). Without this the chat composer pre-loaded
       // the previous user's last model into a fresh session, which read as
       // cross-account leakage.
       try {
-        const _keepKeys = new Set(['shirabe-last-user']);
+        const _keepKeys = new Set(['shirabi-last-user']);
         const _toRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
@@ -2195,6 +2396,8 @@ function initAll() {
   initVisionSettings();
   initTtsSettings();
   initSttSettings();
+  initWakeWordSettings();
+  initCompanionSettings();
   initSearchSettings();
   initResearchSettings();
   initResearchSearchSettings();
@@ -2211,7 +2414,7 @@ function initAll() {
 
 function notifyIntegrationsChanged() {
   try {
-    window.dispatchEvent(new CustomEvent('shirabe-integrations-changed'));
+    window.dispatchEvent(new CustomEvent('shirabi-integrations-changed'));
   } catch (_) {}
 }
 
@@ -2397,7 +2600,7 @@ async function initReminderSettings() {
   // regardless of channel). The hint should make that clear so
   // users don't think they have to choose between channels.
   const CHANNEL_HINTS = {
-    browser: 'Reminders appear as browser notifications inside Shirabe.',
+    browser: 'Reminders appear as browser notifications inside Shirabi.',
     email: 'Reminders are emailed AND shown as a browser notification.',
     ntfy: 'Reminders are pushed via ntfy AND shown as a browser notification.',
   };
@@ -2405,7 +2608,7 @@ async function initReminderSettings() {
   applyReminderChannelAvailability();
   if (!channelSel.dataset.integrationRefreshWired) {
     channelSel.dataset.integrationRefreshWired = '1';
-    window.addEventListener('shirabe-integrations-changed', () => {
+    window.addEventListener('shirabi-integrations-changed', () => {
       refreshReminderChannelAvailability().catch(e => console.warn('Failed to refresh reminder channels', e));
     });
   }
@@ -3142,12 +3345,12 @@ const AGENT_CONFIGS = {
     namePrefix: 'codex agent',
     defaultName: 'Codex Agent',
     pluginPath: '/api/codex/plugin.zip',
-    setupDescription: 'Downloads the plugin bundle and registers it with Codex. Sets <code>SHIRABE_URL</code> + <code>SHIRABE_API_TOKEN</code>, fetches the plugin from <a href="/api/codex/plugin.zip" style="color:var(--accent,var(--red));">this Shirabe instance</a>, and runs <code>codex plugin add shirabe@personal</code>.',
-    buildSetup: (origin, token) => `export SHIRABE_URL=${origin}
-export SHIRABE_API_TOKEN='${token}'
+    setupDescription: 'Downloads the plugin bundle and registers it with Codex. Sets <code>SHIRABI_URL</code> + <code>SHIRABI_API_TOKEN</code>, fetches the plugin from <a href="/api/codex/plugin.zip" style="color:var(--accent,var(--red));">this Shirabi instance</a>, and runs <code>codex plugin add shirabi@personal</code>.',
+    buildSetup: (origin, token) => `export SHIRABI_URL=${origin}
+export SHIRABI_API_TOKEN='${token}'
 mkdir -p ~/plugins
-curl -fsSL -H "Authorization: Bearer $SHIRABE_API_TOKEN" "$SHIRABE_URL/api/codex/plugin.zip" -o /tmp/shirabe-codex-plugin.zip
-python3 -m zipfile -e /tmp/shirabe-codex-plugin.zip ~/plugins
+curl -fsSL -H "Authorization: Bearer $SHIRABI_API_TOKEN" "$SHIRABI_URL/api/codex/plugin.zip" -o /tmp/shirabi-codex-plugin.zip
+python3 -m zipfile -e /tmp/shirabi-codex-plugin.zip ~/plugins
 python3 - <<'PY'
 import json
 from pathlib import Path
@@ -3163,16 +3366,16 @@ data.setdefault("name", "personal")
 data.setdefault("interface", {}).setdefault("displayName", "Personal")
 plugins = data.setdefault("plugins", [])
 entry = {
-    "name": "shirabe",
-    "source": {"source": "local", "path": "./plugins/shirabe"},
+    "name": "shirabi",
+    "source": {"source": "local", "path": "./plugins/shirabi"},
     "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
     "category": "Productivity",
 }
-data["plugins"] = [item for item in plugins if item.get("name") != "shirabe"] + [entry]
+data["plugins"] = [item for item in plugins if item.get("name") != "shirabi"] + [entry]
 p.write_text(json.dumps(data, indent=2) + "\\n")
 PY
-codex plugin add shirabe@personal
-python3 ~/plugins/shirabe/scripts/shirabe_api.py capabilities`,
+codex plugin add shirabi@personal
+python3 ~/plugins/shirabi/scripts/shirabi_api.py capabilities`,
   },
   claude: {
     label: 'Claude Agent',
@@ -3180,13 +3383,13 @@ python3 ~/plugins/shirabe/scripts/shirabe_api.py capabilities`,
     namePrefix: 'claude agent',
     defaultName: 'Claude Agent',
     pluginPath: '/api/claude/plugin.zip',
-    setupDescription: 'Downloads the skill bundle into <code>~/.claude/skills/shirabe/</code>. Sets <code>SHIRABE_URL</code> + <code>SHIRABE_API_TOKEN</code>, fetches the skill from <a href="/api/claude/plugin.zip" style="color:var(--accent,var(--red));">this Shirabe instance</a>. Claude Code auto-loads the skill on next start.',
-    buildSetup: (origin, token) => `export SHIRABE_URL=${origin}
-export SHIRABE_API_TOKEN='${token}'
+    setupDescription: 'Downloads the skill bundle into <code>~/.claude/skills/shirabi/</code>. Sets <code>SHIRABI_URL</code> + <code>SHIRABI_API_TOKEN</code>, fetches the skill from <a href="/api/claude/plugin.zip" style="color:var(--accent,var(--red));">this Shirabi instance</a>. Claude Code auto-loads the skill on next start.',
+    buildSetup: (origin, token) => `export SHIRABI_URL=${origin}
+export SHIRABI_API_TOKEN='${token}'
 mkdir -p ~/.claude
-curl -fsSL -H "Authorization: Bearer $SHIRABE_API_TOKEN" "$SHIRABE_URL/api/claude/plugin.zip" -o /tmp/shirabe-claude-skill.zip
-python3 -m zipfile -e /tmp/shirabe-claude-skill.zip ~/.claude/
-python3 ~/.claude/skills/shirabe/scripts/shirabe_api.py capabilities`,
+curl -fsSL -H "Authorization: Bearer $SHIRABI_API_TOKEN" "$SHIRABI_URL/api/claude/plugin.zip" -o /tmp/shirabi-claude-skill.zip
+python3 -m zipfile -e /tmp/shirabi-claude-skill.zip ~/.claude/
+python3 ~/.claude/skills/shirabi/scripts/shirabi_api.py capabilities`,
   },
 };
 
@@ -3498,7 +3701,7 @@ async function initUnifiedIntegrations() {
       if (ntfyHint) {
         ntfyHint.style.display = isNtfy ? 'block' : 'none';
         if (isNtfy) {
-          ntfyHint.innerHTML = 'Enter the ntfy server URL Shirabe can reach. Examples: <code>http://127.0.0.1:8091</code>, <code>http://100.x.y.z:8091</code>, or <code>https://ntfy.example.com</code>.';
+          ntfyHint.innerHTML = 'Enter the ntfy server URL Shirabi can reach. Examples: <code>http://127.0.0.1:8091</code>, <code>http://100.x.y.z:8091</code>, or <code>https://ntfy.example.com</code>.';
         }
       }
       if (url) {
@@ -3722,7 +3925,7 @@ async function initUnifiedIntegrations() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = format === 'csv' ? 'shirabe-contacts.csv' : 'shirabe-contacts.vcf';
+        a.download = format === 'csv' ? 'shirabi-contacts.csv' : 'shirabi-contacts.vcf';
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -4735,7 +4938,7 @@ async function initUnifiedIntegrations() {
     formEl.innerHTML = `
       <div class="admin-card" style="margin-top:8px">
         <h2 style="font-size:13px">${esc(cfg.label)}</h2>
-        <div style="font-size:11px;opacity:0.65;line-height:1.45;margin:-2px 0 8px;">Generates a scoped token + setup commands so ${esc(cfg.word)} on your own machine can read/write your Shirabe data (todos, email, calendar, etc.). The agent runs in your terminal — it isn't streamed inside Shirabe.</div>
+        <div style="font-size:11px;opacity:0.65;line-height:1.45;margin:-2px 0 8px;">Generates a scoped token + setup commands so ${esc(cfg.word)} on your own machine can read/write your Shirabi data (todos, email, calendar, etc.). The agent runs in your terminal — it isn't streamed inside Shirabi.</div>
         <div class="settings-col">
           <div id="uf-codex-pending" style="display:${current ? 'none' : 'block'};font-size:11px;opacity:0.6;padding:6px 0;">Creating agent...</div>
           <div id="uf-codex-reveal" style="display:none;padding:10px 12px;border:1px solid var(--border);border-left:3px solid var(--accent, var(--red));border-radius:6px;background:rgba(0,0,0,0.04);width:100%;box-sizing:border-box;">
@@ -4755,7 +4958,7 @@ async function initUnifiedIntegrations() {
             </div>
 
             <div style="margin-top:14px;font-weight:600;font-size:11px;margin-bottom:4px;">Configure access</div>
-            <div style="font-size:11px;opacity:0.62;margin-bottom:6px;">Toggle which Shirabe tools this agent can use. New agents start with chat only.</div>
+            <div style="font-size:11px;opacity:0.62;margin-bottom:6px;">Toggle which Shirabi tools this agent can use. New agents start with chat only.</div>
             <div id="uf-codex-inline-scopes"></div>
           </div>
           <div style="font-size:11px;font-weight:600;opacity:0.62;margin-top:10px;">${agentTokens.length ? 'Existing agents' : 'Agents'}</div>

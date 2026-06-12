@@ -47,7 +47,7 @@ from datetime import datetime
 from typing import Dict
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -101,8 +101,8 @@ app.add_middleware(
         "Content-Type",
         "X-API-Key",
         "X-Auth-Token",
-        "X-Shirabe-Internal-Token",
-        "X-Shirabe-Owner",
+        "X-Shirabi-Internal-Token",
+        "X-Shirabi-Owner",
         "X-Requested-With",
         "X-TZ-Offset",
     ],
@@ -138,6 +138,9 @@ _TIMEOUT_EXEMPT_PREFIXES = (
 
 class _RequestTimeoutMiddleware(_BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
+        # BaseHTTPMiddleware breaks WebSocket upgrades — pass them through
+        if request.scope.get("type") == "websocket":
+            return await call_next(request)
         path = request.url.path or ""
         if any(path.startswith(p) for p in _TIMEOUT_EXEMPT_PREFIXES):
             return await call_next(request)
@@ -176,7 +179,7 @@ if AUTH_ENABLED:
         "/api/version",
         "/login",
     }
-    AUTH_EXEMPT_PREFIXES = ["/static"]
+    AUTH_EXEMPT_PREFIXES = ["/static", "/api/wakeword/ws"]
     # Dynamic paths whose own handler proves identity via a path-embedded
     # secret instead of the session/bearer auth. The route handler at
     # routes/task_routes.py validates the per-task `webhook_token` itself
@@ -243,7 +246,7 @@ if AUTH_ENABLED:
         forwarding headers. A bare ``client.host in ('127.0.0.1','::1')`` check is
         unsafe behind a Cloudflare tunnel / reverse proxy: those connect from
         loopback, so a remote visitor would otherwise inherit local trust and
-        slip past LOCALHOST_BYPASS or spoof the internal-tool path. Shirabe's own
+        slip past LOCALHOST_BYPASS or spoof the internal-tool path. Shirabi's own
         in-process agent loopback calls carry none of these headers, so they still
         qualify."""
         host = request.client.host if request.client else None
@@ -256,6 +259,9 @@ if AUTH_ENABLED:
 
     class AuthMiddleware(BaseHTTPMiddleware):
         async def dispatch(self, request: Request, call_next):
+            # BaseHTTPMiddleware breaks WebSocket upgrades — pass them through
+            if request.scope.get("type") == "websocket":
+                return await call_next(request)
             path = request.url.path
             if _is_auth_exempt(path):
                 return await call_next(request)
@@ -268,10 +274,10 @@ if AUTH_ENABLED:
                 _hdr = request.headers.get(INTERNAL_TOOL_HEADER)
                 if _hdr and secrets.compare_digest(_hdr, _ITT) and _is_trusted_loopback(request):
                     # Impersonation: when the agent's loopback call sets
-                    # X-Shirabe-Owner, attribute the request to that user only
+                    # X-Shirabi-Owner, attribute the request to that user only
                     # if they exist. Authorization checks remain separate; this
                     # is just owner attribution for notes/calendar/etc.
-                    _impersonate = (request.headers.get("X-Shirabe-Owner") or "").strip()
+                    _impersonate = (request.headers.get("X-Shirabi-Owner") or "").strip()
                     _auth_mgr = getattr(request.app.state, "auth_manager", None) or auth_manager
                     if _impersonate and _impersonate in getattr(_auth_mgr, "users", {}):
                         request.state.current_user = _impersonate
@@ -609,6 +615,43 @@ stt_service = get_stt_service()
 from routes.stt_routes import setup_stt_routes
 app.include_router(setup_stt_routes(stt_service))
 logger.info("STT service initialized (provider managed via settings)")
+
+# Wake Word Detection
+from services.wakeword import get_wakeword_service
+wakeword_service = get_wakeword_service()
+from routes.wakeword_routes import setup_wakeword_routes, _broadcast, _clients, _wakeword_service
+app.include_router(setup_wakeword_routes(wakeword_service))
+
+@app.websocket("/api/wakeword/ws")
+async def _wakeword_ws(websocket: WebSocket):
+    from routes import wakeword_routes
+    await websocket.accept()
+    _clients.add(websocket)
+    wakeword_routes._loop = asyncio.get_event_loop()
+    logger.info(f"Wake word WS connected ({len(_clients)} clients)")
+    try:
+        while True:
+            data = await websocket.receive_text()
+            try:
+                msg = json.loads(data)
+                if msg.get("type") == "config":
+                    _wakeword_service.update_config(msg.get("config", {}))
+            except (json.JSONDecodeError, Exception):
+                pass
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        logger.error(f"Wake word WS error: {e}")
+    finally:
+        _clients.discard(websocket)
+        from starlette.websockets import WebSocketState
+        if websocket.client_state == WebSocketState.CONNECTED:
+            try:
+                await websocket.close()
+            except Exception:
+                pass
+        logger.info(f"Wake word WS disconnected ({len(_clients)} clients)")
+logger.info("Wake word service initialized")
 
 # Documents (artifacts/canvas)
 from routes.document_routes import setup_document_routes
@@ -1019,13 +1062,13 @@ async def _startup_event():
 
     # Start scheduled task runner — skip when running under a cron-driven
     # deployment where an external worker drives task firing. Mirrors
-    # `SHIRABE_INPROCESS_POLLERS` from the email pollers.
-    _tasks_inprocess = os.environ.get("SHIRABE_INPROCESS_TASKS", "1").strip().lower()
+    # `SHIRABI_INPROCESS_POLLERS` from the email pollers.
+    _tasks_inprocess = os.environ.get("SHIRABI_INPROCESS_TASKS", "1").strip().lower()
     if _tasks_inprocess not in ("0", "false", "no", "off", ""):
         await task_scheduler.start()
     else:
         logger.info(
-            "In-process task scheduler disabled (SHIRABE_INPROCESS_TASKS=0); "
+            "In-process task scheduler disabled (SHIRABI_INPROCESS_TASKS=0); "
             "drive task firing externally (e.g. cron)."
         )
     # Periodic null-owner sweep — re-runs the legacy-owner assignment hourly
@@ -1089,11 +1132,59 @@ async def _startup_event():
     except Exception as e:
         logger.warning(f"Failed to initialize system tray icon: {e}")
 
+    # Start Companion if auto-start is enabled in settings
+    try:
+        from src.settings import get_setting
+        if sys.platform == "win32" and get_setting("companion_autostart", False):
+            import subprocess
+            companion_path = os.path.join(os.path.dirname(__file__), "companion", "Builds", "Windows", "Shirabi Companion.exe")
+            companion_path = os.path.normpath(companion_path)
+            if os.path.exists(companion_path):
+                running = False
+                try:
+                    out = subprocess.check_output('tasklist /FI "IMAGENAME eq Shirabi Companion.exe"', shell=True, text=True)
+                    if "Shirabi Companion.exe" in out:
+                        running = True
+                except Exception:
+                    pass
+                if not running:
+                    subprocess.Popen([companion_path], creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP)
+                    logger.info("Auto-started Shirabi Companion on startup")
+                else:
+                    logger.info("Shirabi Companion is already running, skipping auto-start")
+            else:
+                logger.warning(f"Companion executable not found for auto-start at: {companion_path}")
+    except Exception as e:
+        logger.warning(f"Failed to auto-start Companion: {e}")
+
+    # Start wake word detection if enabled in settings
+    try:
+        from src.settings import get_setting
+        if get_setting("wakeword_enabled", False):
+            wakeword_service.start()
+            logger.info("Wake word detection started on startup")
+    except Exception as e:
+        logger.debug(f"Wake word startup skipped: {e}")
+
     logger.info("Application startup complete")
 
 async def _shutdown_event():
     logger.info("Application shutting down...")
-    # Stop the system tray icon
+    # Stop wake word detection
+    try:
+        wakeword_service.stop()
+    except Exception:
+        pass
+    # Kill Companion if running
+    try:
+        import subprocess
+        out = subprocess.check_output('tasklist /FI "IMAGENAME eq Shirabi Companion.exe"', shell=True, text=True, stderr=subprocess.DEVNULL)
+        if "Shirabi Companion.exe" in out:
+            subprocess.run(["taskkill", "/F", "/IM", "Shirabi Companion.exe"], capture_output=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            logger.info("Killed Shirabi Companion")
+    except Exception:
+        pass
+    # Stop the system tray icon + GPT-SoVITS
     try:
         from src.tray import stop_tray
         stop_tray()

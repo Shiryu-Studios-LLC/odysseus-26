@@ -1,4 +1,4 @@
-// static/js/models.js
+﻿// static/js/models.js
 
 /**
  * Model and provider management
@@ -18,10 +18,10 @@ let _cachedItems = []; // cached /api/models items for model-switch dropdown
 let _lastFetchTime = 0;
 let _fetchInflight = null;
 const _FETCH_CACHE_TTL = 30000; // 30s client-side cache for /api/models
-const COLLAPSE_KEY = 'shirabe-models-collapsed';
-const FAVORITES_KEY = 'shirabe-model-favorites';
-const USAGE_KEY = 'shirabe-model-usage';
-const SORT_KEY = 'shirabe-model-sort';
+const COLLAPSE_KEY = 'shirabi-models-collapsed';
+const FAVORITES_KEY = 'shirabi-model-favorites';
+const USAGE_KEY = 'shirabi-model-usage';
+const SORT_KEY = 'shirabi-model-sort';
 
 export function init(apiBase) {
   API_BASE = apiBase;

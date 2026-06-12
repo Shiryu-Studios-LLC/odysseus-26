@@ -44,10 +44,17 @@ DEFAULT_SETTINGS = {
     "tts_model": "tts-1",
     "tts_voice": "alloy",
     "tts_speed": "1",
+    "companion_autostart": True,
     "stt_enabled": False,
     "stt_provider": "disabled",
     "stt_model": "base",
     "stt_language": "",
+    "wakeword_enabled": True,
+    "wakeword_model_path": r"I:\Shirabi26\Resoruces\Shirabi Wakeword.onnx",
+    "wakeword_threshold": 0.5,
+    "wakeword_debounce": 2.0,
+    "wakeword_vad_threshold": 0.5,
+    "wakeword_noise_suppression": True,
     "search_provider": "searxng",
     # Default fallback chain — when the primary provider fails or
     # rate-limits, we try DuckDuckGo next. Free, no API key required, so

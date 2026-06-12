@@ -197,7 +197,7 @@ class WebhookManager:
     async def deliver_test(self, webhook_id: str, url: str, encrypted_secret: Optional[str]):
         """Public method for the test-webhook route."""
         decrypted = self._decrypt_secret(encrypted_secret)
-        await self._deliver(webhook_id, url, decrypted, "webhook.test", {"message": "Test ping from Shirabe"})
+        await self._deliver(webhook_id, url, decrypted, "webhook.test", {"message": "Test ping from Shirabi"})
 
     async def _deliver(self, webhook_id: str, url: str, secret: Optional[str], event: str, payload: dict):
         """Internal delivery. Never call directly from outside this class (use deliver_test)."""
@@ -211,12 +211,12 @@ class WebhookManager:
         body = json.dumps({"event": event, "timestamp": _utcnow().isoformat(), "data": payload})
         headers = {
             "Content-Type": "application/json",
-            "X-Shirabe-Event": event,
-            "User-Agent": "Shirabe-Webhook/1.0",
+            "X-Shirabi-Event": event,
+            "User-Agent": "Shirabi-Webhook/1.0",
         }
         if secret:
             sig = hmac.new(secret.encode(), body.encode(), hashlib.sha256).hexdigest()
-            headers["X-Shirabe-Signature"] = sig
+            headers["X-Shirabi-Signature"] = sig
 
         db = SessionLocal()
         try:

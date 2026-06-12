@@ -1,4 +1,4 @@
-// ============================================
+﻿// ============================================
 // COOKBOOK HWFIT SUB-MODULE
 // "What Fits?" hardware model fitting UI
 // ============================================
@@ -1417,7 +1417,7 @@ export function _hwfitInit() {
     // empty (see above), which made the rebuilt list temporarily miss the
     // selected server. The old code then "fell back" to the first remote server
     // and persisted it, silently flipping the active host even though the
-    // dropdown still showed shirabe. The user's selection must only change via
+    // dropdown still showed shirabi. The user's selection must only change via
     // an explicit dropdown pick. Here we just refresh env/path if we can match
     // the current host; otherwise leave remoteHost untouched.
     const sel = _envState.servers.find(s => s.host === _envState.remoteHost);

@@ -1,4 +1,4 @@
-// static/js/document.js
+﻿// static/js/document.js
 /**
  * Document editor module — multi-document tabbed panel alongside chat.
  * Supports multiple open documents with tab switching, per-doc state,
@@ -91,7 +91,7 @@ import * as Modals from './modalManager.js';
   }
 
   async function _resolveComposeSendAccountId() {
-    const activeAccountId = window.__shirabeActiveEmailAccount || null;
+    const activeAccountId = window.__shirabiActiveEmailAccount || null;
     if (!activeAccountId) return null;
     const accounts = await _getEmailAccountsCached();
     const activeAccount = accounts.find(a => String(a.id) === String(activeAccountId));
@@ -113,8 +113,8 @@ import * as Modals from './modalManager.js';
   let _lastSessionId = '';          // session context for "+" button
   const docs = new Map();           // docId -> { id, title, language, content, version, sessionId }
 
-  const _docOpenKey = (sessionId) => 'shirabe-doc-open-' + sessionId;
-  const _docMinimizedKey = (sessionId) => 'shirabe-doc-minimized-' + sessionId;
+  const _docOpenKey = (sessionId) => 'shirabi-doc-open-' + sessionId;
+  const _docMinimizedKey = (sessionId) => 'shirabi-doc-minimized-' + sessionId;
 
   function _markDocVisibleState(sessionId, state) {
     if (!sessionId) return;
@@ -3117,7 +3117,7 @@ import * as Modals from './modalManager.js';
           body_html: bodyHtml,
           in_reply_to: inReplyTo || null,
           references: references || null,
-          account_id: window.__shirabeActiveEmailAccount || null,
+          account_id: window.__shirabiActiveEmailAccount || null,
         }),
       });
       const data = await res.json();
@@ -4559,7 +4559,7 @@ import * as Modals from './modalManager.js';
     const editorWrap = document.getElementById('doc-editor-wrap');
     const _fontSizes = ['s', 'm', 'l'];
     const _iconSizes = [12, 14, 16];
-    let _fontIdx = parseInt(localStorage.getItem('shirabe-doc-fontsize') || '0', 10);
+    let _fontIdx = parseInt(localStorage.getItem('shirabi-doc-fontsize') || '0', 10);
     if (!(_fontIdx >= 0 && _fontIdx < 3)) _fontIdx = 0;
     function _applyDocFont() {
       const richEmailBody = document.getElementById('doc-email-richbody');
@@ -4579,7 +4579,7 @@ import * as Modals from './modalManager.js';
           el.style.display = active ? '' : 'none';
         });
       }
-      localStorage.setItem('shirabe-doc-fontsize', _fontIdx);
+      localStorage.setItem('shirabi-doc-fontsize', _fontIdx);
     }
     _applyDocFont();
     // Click cycles through the sizes (S → M → L → S).
@@ -5491,7 +5491,7 @@ import * as Modals from './modalManager.js';
   }
 
   /** Collapse action buttons into overflow "..." menu (3 most-used visible) */
-  const _DOC_RECENTS_KEY = 'shirabe-doc-actions-recent';
+  const _DOC_RECENTS_KEY = 'shirabi-doc-actions-recent';
   const _DOC_MAX_VISIBLE = 2;
 
   function _getDocRecent() {
@@ -6956,16 +6956,16 @@ import * as Modals from './modalManager.js';
     if (!activeDocId) return;
     const data = _activeSuggestions.map(s => ({ id: s.id, find: s.find, replace: s.replace, reason: s.reason }));
     if (data.length) {
-      localStorage.setItem('shirabe-suggestions-' + activeDocId, JSON.stringify(data));
+      localStorage.setItem('shirabi-suggestions-' + activeDocId, JSON.stringify(data));
     } else {
-      localStorage.removeItem('shirabe-suggestions-' + activeDocId);
+      localStorage.removeItem('shirabi-suggestions-' + activeDocId);
     }
   }
 
   /** Restore suggestions from localStorage for a doc */
   function _restoreSuggestionsFromStorage(docId) {
     try {
-      const raw = localStorage.getItem('shirabe-suggestions-' + docId);
+      const raw = localStorage.getItem('shirabi-suggestions-' + docId);
       if (!raw) return;
       const data = JSON.parse(raw);
       if (!Array.isArray(data) || !data.length) return;

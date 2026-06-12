@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Small Shirabe scoped API helper for Codex terminal sessions."""
+"""Small Shirabi scoped API helper for Codex terminal sessions."""
 
 from __future__ import annotations
 
@@ -12,34 +12,34 @@ import urllib.request
 
 def _usage() -> int:
     print("usage:", file=sys.stderr)
-    print("  shirabe_api.py capabilities", file=sys.stderr)
-    print("  shirabe_api.py todos list", file=sys.stderr)
-    print("  shirabe_api.py todos add TITLE", file=sys.stderr)
-    print("  shirabe_api.py emails list [limit]", file=sys.stderr)
-    print("  shirabe_api.py emails read UID", file=sys.stderr)
-    print("  shirabe_api.py cookbook tasks", file=sys.stderr)
-    print("  shirabe_api.py cookbook servers", file=sys.stderr)
-    print("  shirabe_api.py cookbook cached [HOST]", file=sys.stderr)
-    print("  shirabe_api.py cookbook presets", file=sys.stderr)
-    print("  shirabe_api.py cookbook output SESSION_ID [tail]", file=sys.stderr)
-    print("  shirabe_api.py cookbook serve REPO_ID 'CMD' [REMOTE_HOST]", file=sys.stderr)
-    print("  shirabe_api.py cookbook preset NAME", file=sys.stderr)
-    print("  shirabe_api.py cookbook adopt SESSION_ID MODEL [HOST] [PORT]", file=sys.stderr)
-    print("  shirabe_api.py cookbook stop SESSION_ID", file=sys.stderr)
-    print("  shirabe_api.py METHOD /api/codex/path [json-body]", file=sys.stderr)
+    print("  shirabi_api.py capabilities", file=sys.stderr)
+    print("  shirabi_api.py todos list", file=sys.stderr)
+    print("  shirabi_api.py todos add TITLE", file=sys.stderr)
+    print("  shirabi_api.py emails list [limit]", file=sys.stderr)
+    print("  shirabi_api.py emails read UID", file=sys.stderr)
+    print("  shirabi_api.py cookbook tasks", file=sys.stderr)
+    print("  shirabi_api.py cookbook servers", file=sys.stderr)
+    print("  shirabi_api.py cookbook cached [HOST]", file=sys.stderr)
+    print("  shirabi_api.py cookbook presets", file=sys.stderr)
+    print("  shirabi_api.py cookbook output SESSION_ID [tail]", file=sys.stderr)
+    print("  shirabi_api.py cookbook serve REPO_ID 'CMD' [REMOTE_HOST]", file=sys.stderr)
+    print("  shirabi_api.py cookbook preset NAME", file=sys.stderr)
+    print("  shirabi_api.py cookbook adopt SESSION_ID MODEL [HOST] [PORT]", file=sys.stderr)
+    print("  shirabi_api.py cookbook stop SESSION_ID", file=sys.stderr)
+    print("  shirabi_api.py METHOD /api/codex/path [json-body]", file=sys.stderr)
     return 2
 
 
 def _config() -> tuple[str, str] | None:
-    base_url = os.environ.get("SHIRABE_URL", "").strip().rstrip("/")
-    token = os.environ.get("SHIRABE_API_TOKEN", "").strip()
+    base_url = os.environ.get("SHIRABI_URL", "").strip().rstrip("/")
+    token = os.environ.get("SHIRABI_API_TOKEN", "").strip()
     missing = []
     if not base_url:
-        missing.append("SHIRABE_URL")
+        missing.append("SHIRABI_URL")
     if not token:
-        missing.append("SHIRABE_API_TOKEN")
+        missing.append("SHIRABI_API_TOKEN")
     if missing:
-        print(f"missing {', '.join(missing)}; create a Codex Agent token in Shirabe Settings", file=sys.stderr)
+        print(f"missing {', '.join(missing)}; create a Codex Agent token in Shirabi Settings", file=sys.stderr)
         return None
     return base_url, token
 
@@ -146,7 +146,7 @@ def main() -> int:
     if not path.startswith("/"):
         path = "/" + path
     if not path.startswith("/api/codex/"):
-        print("refusing non-/api/codex path; use scoped Shirabe integration endpoints only", file=sys.stderr)
+        print("refusing non-/api/codex path; use scoped Shirabi integration endpoints only", file=sys.stderr)
         return 2
 
     config = _config()

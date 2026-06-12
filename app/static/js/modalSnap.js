@@ -1,4 +1,4 @@
-// Right-edge snap docking for draggable modals.
+﻿// Right-edge snap docking for draggable modals.
 //
 // Adds a "drag-to-right" gesture that docks a modal as a right-side panel
 // (mirrors the snap-to-top fullscreen pattern used by _makeDraggable in
@@ -20,7 +20,7 @@
 const SNAP_PX = 60;
 const UNSNAP_PX = 80;
 const MIN_CHAT_WIDTH = 380;
-const EMAIL_DOC_SPLIT_WIDTH_KEY = 'shirabe-email-doc-split-width';
+const EMAIL_DOC_SPLIT_WIDTH_KEY = 'shirabi-email-doc-split-width';
 
 function _dockClassForSide(side) {
   return side === 'left' ? 'modal-left-docked' : 'modal-right-docked';

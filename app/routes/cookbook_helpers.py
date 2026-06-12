@@ -133,7 +133,7 @@ def _shell_path(p: str) -> str:
 def _local_tooling_path_export(executable: str) -> str:
     """Bash line prepending the running interpreter's bin dir to PATH.
 
-    When Shirabe runs from a virtualenv, that bin dir holds the tools the
+    When Shirabi runs from a virtualenv, that bin dir holds the tools the
     cookbook runners shell out to (`hf`, `python`). tmux runners start from a
     fresh login shell with the venv NOT activated, so without this they can't
     find `hf` and downloads fail with "hf: command not found" — notably on
@@ -240,7 +240,7 @@ def _venv_safe_local_pip_install_cmd(cmd: str, *, local: bool, in_venv: bool) ->
 
     Cookbook dependency installs run through the model-serve task path so users
     can watch progress in the same log UI. For local POSIX runs, that task
-    prepends Shirabe' own interpreter directory to PATH. If Shirabe itself is
+    prepends Shirabi' own interpreter directory to PATH. If Shirabi itself is
     running from a venv, `python3` resolves to the venv Python and pip rejects
     `--user` with "User site-packages are not visible in this virtualenv".
 
@@ -265,10 +265,10 @@ def _venv_safe_local_pip_install_cmd(cmd: str, *, local: bool, in_venv: bool) ->
 
 def _user_shell_path_bootstrap() -> list[str]:
     return [
-        'SHIRABE_USER_SHELL="${SHELL:-}"',
-        'if [ -n "$SHIRABE_USER_SHELL" ] && [ -x "$SHIRABE_USER_SHELL" ]; then',
-        '  SHIRABE_USER_PATH="$("$SHIRABE_USER_SHELL" -ic \'printf "__SHIRABE_PATH__%s\\n" "$PATH"\' 2>/dev/null | sed -n \'s/^__SHIRABE_PATH__//p\' | tail -n 1 || true)"',
-        '  if [ -n "$SHIRABE_USER_PATH" ]; then export PATH="$SHIRABE_USER_PATH:$PATH"; fi',
+        'SHIRABI_USER_SHELL="${SHELL:-}"',
+        'if [ -n "$SHIRABI_USER_SHELL" ] && [ -x "$SHIRABI_USER_SHELL" ]; then',
+        '  SHIRABI_USER_PATH="$("$SHIRABI_USER_SHELL" -ic \'printf "__SHIRABI_PATH__%s\\n" "$PATH"\' 2>/dev/null | sed -n \'s/^__SHIRABI_PATH__//p\' | tail -n 1 || true)"',
+        '  if [ -n "$SHIRABI_USER_PATH" ]; then export PATH="$SHIRABI_USER_PATH:$PATH"; fi',
         'fi',
         'command -v python3 >/dev/null 2>&1 || python3() { python "$@"; }',
     ]
@@ -459,7 +459,7 @@ def _ollama_bind_from_cmd(cmd: str | None, *, default_host: str = "127.0.0.1") -
     """Return the Ollama bind host/port requested by a serve command.
 
     Plain local `ollama serve` defaults to loopback. Remote callers can pass a
-    wider default host so the resulting API is reachable by Shirabe.
+    wider default host so the resulting API is reachable by Shirabi.
     """
     if not cmd:
         return default_host, "11434"
@@ -543,8 +543,8 @@ def _validate_serve_cmd(v: str | None) -> str | None:
 
 def _append_serve_preflight_exit_lines(runner_lines: list[str], *, keep_shell_open: bool) -> None:
     """Append serve-runner lines that surface preflight failures before exit."""
-    runner_lines.append('if [ -n "$SHIRABE_PREFLIGHT_EXIT" ]; then')
-    runner_lines.append('  echo ""; echo "=== Process exited with code $SHIRABE_PREFLIGHT_EXIT ==="')
+    runner_lines.append('if [ -n "$SHIRABI_PREFLIGHT_EXIT" ]; then')
+    runner_lines.append('  echo ""; echo "=== Process exited with code $SHIRABI_PREFLIGHT_EXIT ==="')
     if keep_shell_open:
         # Decouple the post-crash interactive shell from the persistent log
         # file. fds 3/4 were saved BEFORE the tee redirect at the top of
@@ -555,7 +555,7 @@ def _append_serve_preflight_exit_lines(runner_lines: list[str], *, keep_shell_op
         runner_lines.append('  sleep 0.2  # let tee child flush + exit')
         runner_lines.append('  exec "${SHELL:-/bin/bash}"')
     else:
-        runner_lines.append('  exit "$SHIRABE_PREFLIGHT_EXIT"')
+        runner_lines.append('  exit "$SHIRABI_PREFLIGHT_EXIT"')
     runner_lines.append('fi')
 
 
@@ -566,18 +566,18 @@ def _append_serve_exit_code_lines(
     is_pip_install: bool = False,
 ) -> None:
     """Append serve-runner lines that preserve and report the command exit code."""
-    runner_lines.append('SHIRABE_CMD_EXIT=$?')
+    runner_lines.append('SHIRABI_CMD_EXIT=$?')
     if is_pip_install:
-        runner_lines.append('if [ $SHIRABE_CMD_EXIT -eq 0 ]; then echo ""; echo "DOWNLOAD_OK"; fi')
+        runner_lines.append('if [ $SHIRABI_CMD_EXIT -eq 0 ]; then echo ""; echo "DOWNLOAD_OK"; fi')
     if keep_shell_open:
-        runner_lines.append('echo ""; echo "=== Process exited with code $SHIRABE_CMD_EXIT ==="')
+        runner_lines.append('echo ""; echo "=== Process exited with code $SHIRABI_CMD_EXIT ==="')
         # See preflight branch above for the rationale on restoring fds 3/4.
         runner_lines.append('exec 1>&3 2>&4 3>&- 4>&- 2>/dev/null || true')
         runner_lines.append('sleep 0.2  # let tee child flush + exit')
         runner_lines.append('exec "${SHELL:-/bin/bash}"')
     else:
-        runner_lines.append('echo ""; echo "=== Process exited with code $SHIRABE_CMD_EXIT ==="')
-        runner_lines.append('exit "$SHIRABE_CMD_EXIT"')
+        runner_lines.append('echo ""; echo "=== Process exited with code $SHIRABI_CMD_EXIT ==="')
+        runner_lines.append('exit "$SHIRABI_CMD_EXIT"')
 
 
 def _append_llama_cpp_linux_accel_build_lines(runner_lines: list[str]) -> None:
@@ -602,14 +602,14 @@ def _append_llama_cpp_linux_accel_build_lines(runner_lines: list[str]) -> None:
     runner_lines.append('        export HIPCXX="${HIPCXX:-$(hipconfig -l)/clang}"')
     runner_lines.append('        export HIP_PATH="${HIP_PATH:-$(hipconfig -R)}"')
     runner_lines.append('      fi')
-    runner_lines.append('      echo "[shirabe] ROCm/HIP detected — building llama-server with HIP support..."')
+    runner_lines.append('      echo "[shirabi] ROCm/HIP detected — building llama-server with HIP support..."')
     runner_lines.append('      cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_HIP=ON && cmake --build build -j"$NPROC" --target llama-server && ln -sf ~/llama.cpp/build/bin/llama-server ~/bin/llama-server')
     runner_lines.append('    elif command -v nvcc &>/dev/null; then')
     # nvcc alone is not sufficient — pip-installed CUDA wheels or incomplete
     # tooling can expose nvcc without shipping libcudart, causing cmake to fail
     # mid-build with "CUDA runtime library not found". Check cudart explicitly
     # via a small helper so the guard stays readable.
-    runner_lines.append('      _shirabe_has_cudart() {')
+    runner_lines.append('      _shirabi_has_cudart() {')
     runner_lines.append('        ldconfig -p 2>/dev/null | grep -q \'libcudart\\.so\' && return 0')
     runner_lines.append('        local _cuh="${CUDA_HOME:-/usr/local/cuda}"')
     runner_lines.append('        ls "$_cuh/lib64/libcudart.so"* &>/dev/null && return 0')
@@ -619,19 +619,19 @@ def _append_llama_cpp_linux_accel_build_lines(runner_lines: list[str]) -> None:
     runner_lines.append('        ls "${_cuh%/cuda_nvcc}/cuda_runtime/lib/libcudart.so"* &>/dev/null && return 0')
     runner_lines.append('        return 1')
     runner_lines.append('      }')
-    runner_lines.append('      if _shirabe_has_cudart; then')
-    runner_lines.append('        echo "[shirabe] CUDA nvcc + cudart found — building llama-server with CUDA (GPU) support..."')
+    runner_lines.append('      if _shirabi_has_cudart; then')
+    runner_lines.append('        echo "[shirabi] CUDA nvcc + cudart found — building llama-server with CUDA (GPU) support..."')
     runner_lines.append('        cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_CUDA=ON && cmake --build build -j"$NPROC" --target llama-server && ln -sf ~/llama.cpp/build/bin/llama-server ~/bin/llama-server')
     runner_lines.append('      else')
-    runner_lines.append('        echo "[shirabe] WARNING: nvcc found but CUDA runtime (libcudart.so) is not visible — building llama-server for CPU only."')
-    runner_lines.append('        echo "[shirabe]   GPU inference will not be available for this llama.cpp build."')
-    runner_lines.append('        echo "[shirabe]   Ensure libcudart is installed (e.g. cuda-runtime package) and visible via ldconfig or CUDA_HOME."')
+    runner_lines.append('        echo "[shirabi] WARNING: nvcc found but CUDA runtime (libcudart.so) is not visible — building llama-server for CPU only."')
+    runner_lines.append('        echo "[shirabi]   GPU inference will not be available for this llama.cpp build."')
+    runner_lines.append('        echo "[shirabi]   Ensure libcudart is installed (e.g. cuda-runtime package) and visible via ldconfig or CUDA_HOME."')
     runner_lines.append('        cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j"$NPROC" --target llama-server && ln -sf ~/llama.cpp/build/bin/llama-server ~/bin/llama-server')
     runner_lines.append('      fi')
     runner_lines.append('    else')
-    runner_lines.append('      echo "[shirabe] WARNING: no HIP/CUDA toolchain found — building llama-server for CPU only."')
-    runner_lines.append('      echo "[shirabe]   GPU inference will not be available for this llama.cpp build."')
-    runner_lines.append('      echo "[shirabe]   Install ROCm for AMD GPUs or vLLM/CUDA tooling for NVIDIA, then re-launch this serve task."')
+    runner_lines.append('      echo "[shirabi] WARNING: no HIP/CUDA toolchain found — building llama-server for CPU only."')
+    runner_lines.append('      echo "[shirabi]   GPU inference will not be available for this llama.cpp build."')
+    runner_lines.append('      echo "[shirabi]   Install ROCm for AMD GPUs or vLLM/CUDA tooling for NVIDIA, then re-launch this serve task."')
     runner_lines.append('      cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j"$NPROC" --target llama-server && ln -sf ~/llama.cpp/build/bin/llama-server ~/bin/llama-server')
     runner_lines.append('    fi')
 
@@ -650,7 +650,7 @@ def _llama_cpp_rebuild_cmd() -> str:
         'mkdir -p "$HOME/bin" && '
         'rm -f "$HOME/bin/llama-server" && '
         'rm -rf "$HOME/llama.cpp/build" && '
-        'echo "[shirabe] Cleared the cached llama.cpp build. '
+        'echo "[shirabi] Cleared the cached llama.cpp build. '
         'Re-launch the serve task to rebuild llama-server from source '
         '(CUDA or HIP will be used if a toolchain is now available)."'
     )
@@ -803,4 +803,4 @@ def _ssh_ps(host, script_path, port=None):
 
 
 # Windows session dir — stored in user's temp on the remote
-WIN_SESSION_DIR = "$env:TEMP\\\\shirabe-sessions"
+WIN_SESSION_DIR = "$env:TEMP\\\\shirabi-sessions"

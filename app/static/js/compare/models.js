@@ -1,4 +1,4 @@
-// compare/models.js — model classification, fetching, display names, persistence
+﻿// compare/models.js — model classification, fetching, display names, persistence
 import Storage from '../storage.js';
 import state from './state.js';
 import uiModule from '../ui.js';
@@ -38,10 +38,10 @@ function _modelDisplayNames(models) {
 /** Save selected models and synth models to localStorage, keyed by compare mode. */
 function _persistSelections() {
   if (state._selectedModels.length > 0) {
-    Storage.setJSON('shirabe-compare-selections-' + (state._compareMode || 'chat'), state._selectedModels);
+    Storage.setJSON('shirabi-compare-selections-' + (state._compareMode || 'chat'), state._selectedModels);
   }
   if ((state._compareMode === 'search' || state._compareMode === 'research') && state._searchSynthModels) {
-    Storage.setJSON('shirabe-compare-synth-' + state._compareMode, state._searchSynthModels);
+    Storage.setJSON('shirabi-compare-synth-' + state._compareMode, state._searchSynthModels);
   }
 }
 
@@ -91,7 +91,7 @@ async function fetchModels() {
 }
 
 // ── Shuffle pool persistence ──
-const POOL_STORAGE_KEY = 'shirabe-shuffle-pool-excluded';
+const POOL_STORAGE_KEY = 'shirabi-shuffle-pool-excluded';
 
 function getExcludedModels() {
   return Storage.getJSON(POOL_STORAGE_KEY, []);

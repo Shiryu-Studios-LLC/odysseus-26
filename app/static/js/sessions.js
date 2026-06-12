@@ -1,4 +1,4 @@
-// Session Management Functions
+﻿// Session Management Functions
 // This module handles all session-related operations
 
 import Storage from './storage.js';
@@ -21,7 +21,7 @@ const SIDEBAR_MAX_VISIBLE = 10;
 const FOLDER_MAX_VISIBLE = 5;
 let _showAllSessions = false;
 let _expandedFolders = {};  // folderName -> true if "show more" clicked
-let _sortMode = Storage.get('shirabe-session-sort') || 'active'; // default to last active
+let _sortMode = Storage.get('shirabi-session-sort') || 'active'; // default to last active
 let _autoCreateInProgress = false; // guard against recursive auto-create
 const _INCOGNITO_SESSIONS_KEY = 'ody-incognito-sessions'; // sessionStorage key for incognito session IDs
 const _isMac = /Mac|iPhone|iPad/.test(navigator.platform);
@@ -62,7 +62,7 @@ function _deselectCurrentSession(sid) {
   if (currentSessionId !== sid) return;
   currentSessionId = null;
   uiModule.el('chat-history').innerHTML = '';
-  uiModule.el('current-meta').textContent = 'Shirabe Chat';
+  uiModule.el('current-meta').textContent = 'Shirabi Chat';
   Storage.remove('lastSessionId');
   history.replaceState(null, '', window.location.pathname);
   if (window.chatModule && window.chatModule.showWelcomeScreen) {
@@ -118,8 +118,8 @@ function _normalizeSessionsList(fetched) {
 export function initDependencies() {}
 
 // ── Folder state persistence ──
-const FOLDER_STATE_KEY = 'shirabe-folder-state';
-const FOLDER_ORDER_KEY = 'shirabe-folder-order';
+const FOLDER_STATE_KEY = 'shirabi-folder-state';
+const FOLDER_ORDER_KEY = 'shirabi-folder-order';
 
 function loadFolderState() {
   return Storage.getJSON(FOLDER_STATE_KEY, {});
@@ -1506,7 +1506,7 @@ export async function selectSession(id, { keepSidebar = false } = {}) {
     currentSessionId = id;
     // Identify Assistant / task-output sessions so we don't "trap" the user
     // there on return. Skipped from both `lastSessionId` persistence and the
-    // URL hash — the user complained that coming back to Shirabe kept
+    // URL hash — the user complained that coming back to Shirabi kept
     // landing them on the auto-firing task-log chat instead of their last
     // real conversation.
     const _meta = sessions.find(s => s.id === id);
@@ -1573,7 +1573,7 @@ export async function selectSession(id, { keepSidebar = false } = {}) {
 
     const currentMetaEl = uiModule.el('current-meta');
     if (currentMetaEl) {
-      currentMetaEl.textContent = meta ? meta.name : 'Shirabe Chat';
+      currentMetaEl.textContent = meta ? meta.name : 'Shirabi Chat';
     }
     // Update model picker visibility
     updateModelPicker();
@@ -1722,7 +1722,7 @@ export async function selectSession(id, { keepSidebar = false } = {}) {
     if (window.documentModule) {
       const docBtn = document.getElementById('overflow-doc-btn');
       const meta = sessions.find(s => s.id === id);
-      const shouldOpen = localStorage.getItem('shirabe-doc-open-' + id) === '1';
+      const shouldOpen = localStorage.getItem('shirabi-doc-open-' + id) === '1';
       const hasDocs = !!(meta && meta.has_documents);
       if (docBtn) {
         docBtn.classList.remove('active');
@@ -3065,8 +3065,8 @@ export function closeArchive() {
 export function getSortMode() { return _sortMode; }
 export function setSortMode(mode) {
   _sortMode = mode || null;
-  if (mode) Storage.set('shirabe-session-sort', mode);
-  else Storage.remove('shirabe-session-sort');
+  if (mode) Storage.set('shirabi-session-sort', mode);
+  else Storage.remove('shirabi-session-sort');
   renderSessionList();
 }
 

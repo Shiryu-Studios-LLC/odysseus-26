@@ -1,5 +1,5 @@
-// ============================================
-// Shirabe UI — Main Application Orchestrator
+﻿// ============================================
+// Shirabi UI — Main Application Orchestrator
 // ES6 module — entry point, no exports (wires all modules together)
 // ============================================
 import Storage from './js/storage.js';
@@ -16,10 +16,11 @@ import documentModule from './js/document.js';
 import searchChatModule from './js/search-chat.js';
 import { makeWindowDraggable } from './js/windowDrag.js';
 import markdownModule from './js/markdown.js';
-import chatRenderer from './js/chatRenderer.js';
+import chatRenderer from './js/chatRenderer.js?v=20260610r';
 import sessionModule from './js/sessions.js';
 import memoryModule from './js/memory.js';
 import voiceRecorderModule from './js/voiceRecorder.js';
+import wakewordModule from './js/wakeword.js';
 import censorModule from './js/censor.js';
 import galleryModule from './js/gallery.js';
 import tasksModule from './js/tasks.js';
@@ -77,7 +78,7 @@ async function _refreshDefaultChat() {
     const d = await (await fetch('/api/default-chat')).json();
     if (d && d.endpoint_url && d.model) {
       _defaultChat = d;
-      try { window.__shirabeDefaultChat = d; } catch (_) {}
+      try { window.__shirabiDefaultChat = d; } catch (_) {}
       return d;
     }
   } catch (_) {}
@@ -351,7 +352,7 @@ function initializeEventListeners() {
       e.stopPropagation();
       exportMenu.classList.remove('open');
       const meta = sessionModule.getSessions().find(s => s.id === sessionModule.getCurrentSessionId());
-      const sessionName = meta ? meta.name : 'Shirabe Chat';
+      const sessionName = meta ? meta.name : 'Shirabi Chat';
       const originalTitle = document.title;
       document.title = sessionName;
       const chatHistory = document.getElementById('chat-history');
@@ -1052,7 +1053,7 @@ function initializeEventListeners() {
   // click handler in emailInbox, sessionModule's loaded session list) are
   // still being wired up further down in this same function. Stash the
   // opener so it runs from sessionModule.loadSessions().finally() below.
-  if (_opener) window._shirabeRouteOpener = _opener;
+  if (_opener) window._shirabiRouteOpener = _opener;
 
   // Archive browser tool button
   const toolLibraryBtn = el('tool-library-btn');
@@ -1315,7 +1316,7 @@ function initializeEventListeners() {
     modelSortDropdown.querySelectorAll('.sort-option').forEach(opt => {
       opt.addEventListener('click', () => {
         const mode = opt.dataset.sort;
-        Storage.set('shirabe-model-sort', mode);
+        Storage.set('shirabi-model-sort', mode);
         if (modelsModule) modelsModule.refreshModels();
         modelSortDropdown.style.display = 'none';
         uiModule.showToast('Models sorted: ' + opt.textContent.trim().toLowerCase());
@@ -1627,7 +1628,7 @@ function initializeEventListeners() {
   })();
 
   // ── Tool splash explainer messages (shown first 2 times per tool) ──
-  const SPLASH_COUNT_KEY = 'shirabe-tool-splash-counts';
+  const SPLASH_COUNT_KEY = 'shirabi-tool-splash-counts';
   const SPLASH_MAX = 2;
   const _toolSplashes = {
     web: { role: 'Web Search', text: 'Searches the web for relevant information to include in the response. Results are fetched and summarized before the AI answers.' },
@@ -2115,7 +2116,7 @@ function initializeEventListeners() {
       pickerWrap.classList.toggle('picker-auto-hidden', w < PICKER_HIDE_WIDTH);
       // Hide placeholder text
       if (textarea) {
-        textarea.setAttribute('placeholder', w < PLACEHOLDER_HIDE_WIDTH ? '' : 'Message Shirabe...');
+        textarea.setAttribute('placeholder', w < PLACEHOLDER_HIDE_WIDTH ? '' : 'Message Shirabi...');
       }
       // Hide entire bottom toolbar (tools, mode toggle) — only send button remains
       if (inputBottom) {
@@ -2376,7 +2377,7 @@ function initializeEventListeners() {
   }
 
   // ── UI Visibility (Customize UI modal) ──
-  const UI_VIS_KEY = 'shirabe-ui-visibility';
+  const UI_VIS_KEY = 'shirabi-ui-visibility';
 
   // Selector map: key → CSS selector(s) for targets
   const UI_VIS_MAP = {
@@ -2657,7 +2658,7 @@ function initializeEventListeners() {
 
   // Migrate old toolbar visibility key if present
   (function migrateOldToolbarVis() {
-    const OLD_KEY = 'shirabe-toolbar-visibility';
+    const OLD_KEY = 'shirabi-toolbar-visibility';
     try {
       const old = Storage.getJSON(OLD_KEY, null);
       if (old && typeof old === 'object') {
@@ -3336,9 +3337,9 @@ function initializeEventListeners() {
 // ============================================
 // INITIALIZATION ON PAGE LOAD
 // ============================================
-function startShirabeApp() {
-  if (window.__shirabeAppStarted) return;
-  window.__shirabeAppStarted = true;
+function startShirabiApp() {
+  if (window.__shirabiAppStarted) return;
+  window.__shirabiAppStarted = true;
   // Set CSS variables
   document.documentElement.style.setProperty('--line-height', '20px');
 
@@ -3387,7 +3388,7 @@ function startShirabeApp() {
     documentModule.init(API_BASE);
     // Restore document panel if it was open before refresh
     const _curSession = sessionModule && sessionModule.getCurrentSessionId();
-    if (_curSession && localStorage.getItem('shirabe-doc-open-' + _curSession) === '1') {
+    if (_curSession && localStorage.getItem('shirabi-doc-open-' + _curSession) === '1') {
       documentModule.loadSessionDocs(_curSession);
     }
   }  
@@ -3550,7 +3551,7 @@ function startShirabeApp() {
   const _newChatIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 
   // Expose icons globally so chat.js updateSubmitButton can use them
-  window._shirabeBtnIcons = { send: _sendIcon, mic: _micIcon, stop: _stopIcon, newChat: _newChatIcon };
+  window._shirabiBtnIcons = { send: _sendIcon, mic: _micIcon, stop: _stopIcon, newChat: _newChatIcon };
 
   function _isSttEnabled() {
     return voiceRecorderModule._sttProvider && voiceRecorderModule._sttProvider !== 'disabled';
@@ -3913,9 +3914,9 @@ function startShirabeApp() {
         if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 300); }
         // Fire any URL route opener now that sessions + module wiring are
         // ready. Deferred from up top of init for exactly this reason.
-        if (window._shirabeRouteOpener) {
-          try { window._shirabeRouteOpener(); } catch (_) {}
-          window._shirabeRouteOpener = null;
+        if (window._shirabiRouteOpener) {
+          try { window._shirabiRouteOpener(); } catch (_) {}
+          window._shirabiRouteOpener = null;
         }
       });
   } else {
@@ -3943,6 +3944,31 @@ function startShirabeApp() {
   // Ensure proper initial state
   voiceRecorderModule.init();
   if (censorModule) censorModule.init();
+
+  // Wake word detection — auto-start recording when wake word is heard
+  wakewordModule.connect((wakeWord, confidence) => {
+    console.log('[WakeWord] Callback fired:', wakeWord, confidence);
+    if (voiceRecorderModule.getIsRecording()) { console.log('[WakeWord] Already recording, skip'); return; }
+    const sendBtn = document.getElementById('send-btn');
+    const msgEl = document.getElementById('message-input') || document.getElementById('message');
+    const hasText = msgEl && msgEl.value && msgEl.value.trim();
+    if (hasText) { console.log('[WakeWord] Has text in input, skip'); return; }
+    console.log('[WakeWord] Starting recording...');
+    // Trigger recording
+    if (sendBtn) {
+      sendBtn.dataset.mode = 'recording';
+      sendBtn.classList.add('recording');
+    }
+    voiceRecorderModule.startRecording(
+      (audioFile) => {
+        console.log('[WakeWord] Audio file created:', audioFile.name);
+        if (window.fileHandlerModule) window.fileHandlerModule.addFiles([audioFile]);
+      },
+      uiModule.showToast,
+      uiModule.showError,
+      true  // autoStopOnSilence
+    );
+  });
 
   // Auto-focus message input on load
   const msgEl = document.getElementById('message');
@@ -4074,7 +4100,7 @@ function startShirabeApp() {
 }
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', startShirabeApp, { once: true });
+  document.addEventListener('DOMContentLoaded', startShirabiApp, { once: true });
 } else {
-  startShirabeApp();
+  startShirabiApp();
 }

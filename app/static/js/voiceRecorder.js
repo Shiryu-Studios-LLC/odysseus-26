@@ -16,6 +16,16 @@ let isRecording = false;
 let recordingStartTime = null;
 let recordingInterval = null;
 
+// Silence detection state (used for wake-word auto-stop)
+let _audioContext = null;
+let _analyser = null;
+let _silenceTimer = null;
+let _silenceCheckInterval = null;
+let _wakeWordTriggered = false;
+const SILENCE_THRESHOLD = 0.015;   // RMS volume below this = silence
+const SILENCE_TIMEOUT_MS = 2500;   // stop after 2.5s of silence
+const MIN_RECORDING_MS = 1500;     // ignore silence in first 1.5s
+
 // Browser STT state
 let _recognition = null;
 let _browserTranscript = '';
@@ -53,6 +63,7 @@ function formatTime(seconds) {
  * Reset UI state after recording ends
  */
 function _resetRecordingUI() {
+  _stopSilenceDetection();
   isRecording = false;
   if (recordingInterval) {
     clearInterval(recordingInterval);
@@ -146,9 +157,59 @@ function insertTranscription(text, showToast) {
 }
 
 /**
+ * Start silence detection on a media stream.
+ * If volume stays below SILENCE_THRESHOLD for SILENCE_TIMEOUT_MS, auto-stop.
+ */
+function _startSilenceDetection(stream) {
+  _stopSilenceDetection();
+  try {
+    _audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const source = _audioContext.createMediaStreamSource(stream);
+    _analyser = _audioContext.createAnalyser();
+    _analyser.fftSize = 512;
+    source.connect(_analyser);
+
+    const dataArray = new Float32Array(_analyser.fftSize);
+    let silenceStart = null;
+
+    _silenceCheckInterval = setInterval(() => {
+      if (!isRecording || !_analyser) { _stopSilenceDetection(); return; }
+
+      _analyser.getFloatTimeDomainData(dataArray);
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) sum += dataArray[i] * dataArray[i];
+      const rms = Math.sqrt(sum / dataArray.length);
+
+      const elapsed = Date.now() - recordingStartTime.getTime();
+      if (elapsed < MIN_RECORDING_MS) return;
+
+      if (rms < SILENCE_THRESHOLD) {
+        if (!silenceStart) silenceStart = Date.now();
+        if (Date.now() - silenceStart >= SILENCE_TIMEOUT_MS) {
+          console.log('[WakeWord] Silence detected — auto-stopping recording');
+          _stopSilenceDetection();
+          stopRecording();
+        }
+      } else {
+        silenceStart = null;
+      }
+    }, 200);
+  } catch (e) {
+    console.warn('[WakeWord] Silence detection setup failed:', e);
+  }
+}
+
+function _stopSilenceDetection() {
+  if (_silenceCheckInterval) { clearInterval(_silenceCheckInterval); _silenceCheckInterval = null; }
+  if (_silenceTimer) { clearTimeout(_silenceTimer); _silenceTimer = null; }
+  if (_audioContext) { try { _audioContext.close(); } catch (e) {} _audioContext = null; }
+  _analyser = null;
+}
+
+/**
  * Start voice recording
  */
-export function startRecording(onFileCreated, showToast, showError) {
+export function startRecording(onFileCreated, showToast, showError, autoStopOnSilence = false) {
   // Check for secure context (getUserMedia requires HTTPS or localhost)
   if (!window.isSecureContext) {
     if (showError) showError('Microphone requires HTTPS. Use a reverse proxy with SSL or access via localhost.');
@@ -218,10 +279,16 @@ export function startRecording(onFileCreated, showToast, showError) {
       mediaRecorder.start();
       isRecording = true;
       recordingStartTime = new Date();
+      _wakeWordTriggered = autoStopOnSilence;
 
       // Start browser STT if that's the provider
       if (_sttProvider === 'browser') {
         startBrowserSTT();
+      }
+
+      // Set up silence detection for wake-word-triggered recordings
+      if (autoStopOnSilence) {
+        _startSilenceDetection(stream);
       }
 
       if (showToast) {

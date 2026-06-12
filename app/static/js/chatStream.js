@@ -1,4 +1,4 @@
-// static/js/chatStream.js
+﻿// static/js/chatStream.js
 // SSE event handlers extracted from chat.js handleChatSubmit
 // Handles: ui_control events, background stream management
 
@@ -106,15 +106,15 @@ export function handleUIControl(uiData) {
       }
 
     } else if (uiEvent === 'highlight' || uiData.ui_event === 'highlight') {
-      document.querySelectorAll('.shirabe-highlight').forEach(function(e) { e.classList.remove('shirabe-highlight'); });
-      document.querySelectorAll('.shirabe-hl-label').forEach(function(e) { e.remove(); });
+      document.querySelectorAll('.shirabi-highlight').forEach(function(e) { e.classList.remove('shirabi-highlight'); });
+      document.querySelectorAll('.shirabi-hl-label').forEach(function(e) { e.remove(); });
       var target = document.querySelector(uiData.selector);
       if (target) {
-        target.classList.add('shirabe-highlight');
+        target.classList.add('shirabi-highlight');
         target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         if (uiData.label) {
           var lbl = document.createElement('div');
-          lbl.className = 'shirabe-hl-label';
+          lbl.className = 'shirabi-hl-label';
           lbl.textContent = uiData.label;
           if (!target.style.position) target.style.position = 'relative';
           target.appendChild(lbl);
@@ -122,8 +122,8 @@ export function handleUIControl(uiData) {
       }
 
     } else if (uiEvent === 'clear_highlight' || uiData.ui_event === 'clear_highlight') {
-      document.querySelectorAll('.shirabe-highlight').forEach(function(e) { e.classList.remove('shirabe-highlight'); });
-      document.querySelectorAll('.shirabe-hl-label').forEach(function(e) { e.remove(); });
+      document.querySelectorAll('.shirabi-highlight').forEach(function(e) { e.classList.remove('shirabi-highlight'); });
+      document.querySelectorAll('.shirabi-hl-label').forEach(function(e) { e.remove(); });
 
     } else if (uiEvent === 'research_started' || uiData.ui_event === 'research_started') {
       // Agent kicked off deep research — adopt the session into the

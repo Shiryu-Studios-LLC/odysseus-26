@@ -1,4 +1,4 @@
-// static/js/chatRenderer.js
+﻿// static/js/chatRenderer.js
 // Extracted from chat.js — message rendering, sources, images, metrics
 
 import uiModule from './ui.js';
@@ -1281,8 +1281,8 @@ export function showWelcomeScreen() {
 }
 
 // ── Dynamic action buttons (show 3 most recent, rest under ···) ──
-const _ACTION_RECENTS_KEY = 'shirabe-msg-actions-recent';
-const _MAX_VISIBLE = 2;
+const _ACTION_RECENTS_KEY = 'shirabi-msg-actions-recent';
+const _MAX_VISIBLE = 3;
 
 function _getRecentActions() {
   try { return JSON.parse(localStorage.getItem(_ACTION_RECENTS_KEY) || '[]'); } catch { return []; }
@@ -1305,6 +1305,9 @@ export function createMsgFooter(msgElement) {
   actions.className = 'msg-actions';
 
   // Define all available actions: { id, icon, title, className, handler }
+  const SPEAKER_ICON = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
+  const SPEAKER_STOP = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+
   const allActions = [
     { id: 'copy', icon: COPY_ICON, title: 'Copy message', cls: 'footer-copy-btn', html: true, handler(e) {
       e.stopPropagation();
@@ -1312,6 +1315,41 @@ export function createMsgFooter(msgElement) {
       uiModule.copyToClipboard(msgElement.dataset.raw || msgElement.querySelector('.body')?.textContent || '');
       btn.innerHTML = CHECK_ICON;
       setTimeout(() => { btn.innerHTML = COPY_ICON; }, 1500);
+    }},
+    { id: 'readaloud', icon: SPEAKER_ICON, title: 'Read aloud', cls: 'footer-copy-btn', html: true, handler(e) {
+      e.stopPropagation();
+      const btn = e.currentTarget;
+      const text = msgElement.dataset.raw || msgElement.querySelector('.body')?.textContent || '';
+      if (!text) return;
+
+      // Use server TTS (GPT-SoVITS / Kokoro) when available
+      if (window.aiTTSManager && window.aiTTSManager.available && !window.aiTTSManager.useBrowserTTS) {
+        if (window.aiTTSManager.isPlaying) { window.aiTTSManager.stop(); btn.innerHTML = SPEAKER_ICON; btn.title = 'Read aloud'; return; }
+        btn.innerHTML = SPEAKER_STOP; btn.title = 'Stop';
+        const resetBtn = () => { btn.innerHTML = SPEAKER_ICON; btn.title = 'Read aloud'; };
+        window.aiTTSManager.play(text).then(() => { resetBtn(); }).catch(() => { resetBtn(); });
+        return;
+      }
+
+      // Fallback to browser TTS
+      let cleanedText = text;
+      if (window.aiTTSManager && typeof window.aiTTSManager.extractPlainText === 'function') {
+        cleanedText = window.aiTTSManager.extractPlainText(text);
+      } else {
+        cleanedText = text
+          .replace(/<(?:think(?:ing)?|thought)(?:\s+[^>]*)?>[\s\S]*?<\/(?:think(?:ing)?|thought)>/gi, '')
+          .replace(/<(?:think(?:ing)?|thought)(?:\s+[^>]*)?>[\s\S]*/gi, '')
+          .replace(/<[^>]+>/g, '');
+      }
+      if (!cleanedText.trim()) return;
+
+      if (window.speechSynthesis.speaking) { window.speechSynthesis.cancel(); btn.innerHTML = SPEAKER_ICON; btn.title = 'Read aloud'; return; }
+      const utt = new SpeechSynthesisUtterance(cleanedText);
+      utt.rate = 1;
+      btn.innerHTML = SPEAKER_STOP; btn.title = 'Stop';
+      utt.onend = () => { btn.innerHTML = SPEAKER_ICON; btn.title = 'Read aloud'; };
+      utt.onerror = () => { btn.innerHTML = SPEAKER_ICON; btn.title = 'Read aloud'; };
+      window.speechSynthesis.speak(utt);
     }},
     { id: 'edit', icon: '\u270E', title: 'Edit', cls: 'msg-action-btn', handler(e) {
       e.stopPropagation();
@@ -1344,7 +1382,7 @@ export function createMsgFooter(msgElement) {
 
   // Determine which 3 to show: use recent order, fallback to defaults
   const recent = _getRecentActions();
-  const defaults = ['copy', 'delete', 'fork'];
+  const defaults = ['copy', 'readaloud', 'delete'];
   const order = recent.length > 0 ? recent : defaults;
   const sorted = [...availableActions].sort((a, b) => {
     const ai = order.indexOf(a.id), bi = order.indexOf(b.id);
@@ -1497,7 +1535,7 @@ export function createMsgFooter(msgElement) {
 /**
  * Create a footer row for a user message with action buttons (same system as AI footer).
  */
-const _USER_ACTION_RECENTS_KEY = 'shirabe-user-actions-recent';
+const _USER_ACTION_RECENTS_KEY = 'shirabi-user-actions-recent';
 
 function _getUserRecentActions() {
   try { return JSON.parse(localStorage.getItem(_USER_ACTION_RECENTS_KEY) || '[]'); } catch { return []; }
@@ -1796,7 +1834,7 @@ export function displayMetrics(messageElement, metrics) {
           compactMsg.className = 'msg msg-ai';
           const compactRole = document.createElement('div');
           compactRole.className = 'role';
-          compactRole.textContent = 'Shirabe';
+          compactRole.textContent = 'Shirabi';
           const compactBody = document.createElement('div');
           compactBody.className = 'body';
           compactBody.innerHTML = 'Compacting context <span class="compact-wave">▁▂▃▅▂▁</span>';
@@ -2053,7 +2091,7 @@ export function addMessage(role, content, modelName, metadata) {
     const isSlash = metadata?.source === 'slash';
     const isCompacted = metadata?.compacted;
     const resolvedModel = modelName || metadata?.model;
-    var _roleText = role === 'user' ? 'You' : (isSlash || isCompacted) ? 'Shirabe' : shortModel(resolvedModel);
+    var _roleText = role === 'user' ? 'You' : (isSlash || isCompacted) ? 'Shirabi' : shortModel(resolvedModel);
     if (role === 'assistant' && (metadata?.research || metadata?.research_clarification)) {
       _roleText += ' (Research)';
     }

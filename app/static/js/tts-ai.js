@@ -10,7 +10,7 @@ class AITTSManager {
         this.browserVoice = '';
         this.playbackSpeed = 1;
         this._provider = 'disabled';
-        this.autoPlay = false;
+        this.autoPlay = true;
         this.cache = new Map(); // Client-side audio cache
 
         // Queue for sequential auto-play
@@ -66,8 +66,19 @@ class AITTSManager {
     }
 
     extractPlainText(content) {
-        // Strip <think>/<thinking> blocks (model reasoning)
-        let cleaned = content.replace(/<think(?:ing)?>[\s\S]*?<\/think(?:ing)?>/gi, '');
+        if (!content) return '';
+
+        // Strip closed <think>/<thinking>/<thought> blocks (model reasoning)
+        let cleaned = content.replace(/<(?:think(?:ing)?|thought)(?:\s+[^>]*)?>[\s\S]*?<\/(?:think(?:ing)?|thought)>/gi, '');
+        cleaned = cleaned.replace(/<\|channel>thought[\s\S]*?(?:<channel\|>|<\/channel>)/gi, '');
+
+        // Strip unclosed <think>/<thinking>/<thought> blocks (which occur during streaming)
+        cleaned = cleaned.replace(/<(?:think(?:ing)?|thought)(?:\s+[^>]*)?>[\s\S]*/gi, '');
+        cleaned = cleaned.replace(/<\|channel>thought[\s\S]*/gi, '');
+
+        // Clean up other channel/control tags
+        cleaned = cleaned.replace(/<\|channel>(?:response)?/gi, '');
+        cleaned = cleaned.replace(/<channel\|>/gi, '');
 
         // Create a temporary div to parse HTML/markdown
         const temp = document.createElement('div');
@@ -178,7 +189,8 @@ class AITTSManager {
         const plainText = this.extractPlainText(text);
         if (!plainText) return;
 
-        if (this.useBrowserTTS) {
+        // Always prefer browser TTS as reliable fallback
+        if (this.useBrowserTTS || !this.available) {
             return this._playBrowser(plainText);
         }
 
@@ -251,6 +263,16 @@ class AITTSManager {
      * finishes before the next starts. Stopping any message clears the queue.
      */
     enqueue(text, button, resetFn) {
+        // Limit queue to 2 items — drop oldest if too many pile up during streaming
+        if (this._queue.length >= 2 && this._processing) {
+            // Keep the current playing item and the newest one, drop middle items
+            const current = this._queue.shift();
+            // Don't drop the currently playing item
+            if (this._processing && this._queue.length > 0) {
+                // Only keep the latest item
+                this._queue = [this._queue[this._queue.length - 1]];
+            }
+        }
         this._queue.push({ text, button, resetFn });
         if (!this._processing) {
             this._processQueue();
@@ -290,19 +312,20 @@ class AITTSManager {
         try {
             if (!this._processing) return;
 
-            const audioUrl = await this.synthesize(text);
-
-            if (!this._processing) return;
-
             button.innerHTML = ICON_STOP;
             button.classList.remove('loading');
             button.classList.add('playing');
             button.title = 'Stop';
 
-            if (this.useBrowserTTS) {
+            // Fall back to browser TTS when no API provider is configured
+            if (this.useBrowserTTS || !this.available) {
                 const plainText = this.extractPlainText(text);
                 await this._playBrowser(plainText);
             } else {
+                const audioUrl = await this.synthesize(text);
+
+                if (!this._processing) return;
+
                 if (this.currentAudio) {
                     this.currentAudio.pause();
                     this.currentAudio = null;
@@ -351,13 +374,14 @@ class AITTSManager {
     streamingUpdate(accumulatedText) {
         if (!this._streamActive || !this.available || !this.autoPlay) return;
         if (this._streamDebounceTimer) return;
+        // 1200ms debounce — wait for full paragraphs to accumulate
         this._streamDebounceTimer = setTimeout(() => {
             this._streamDebounceTimer = null;
-            this._processStreamingSentences(accumulatedText);
-        }, 150);
+            this._processStreamingParagraphs(accumulatedText);
+        }, 1200);
     }
 
-    _processStreamingSentences(accumulatedText) {
+    _processStreamingParagraphs(accumulatedText) {
         if (!this._streamActive) return;
 
         var text = accumulatedText
@@ -369,34 +393,22 @@ class AITTSManager {
 
         var newRegion = plainText.substring(this._streamSentencesSent);
 
-        var sentences = [];
-        var current = '';
-        for (var i = 0; i < newRegion.length; i++) {
-            current += newRegion[i];
-            var ch = newRegion[i];
-            var next = newRegion[i + 1];
-            if ((ch === '.' || ch === '!' || ch === '?') && next && /\s/.test(next)) {
-                var lastWord = current.trim().split(/\s/).pop() || '';
-                if (/^\d+\.$/.test(lastWord)) continue;
-                if (/^[A-Z][a-z]?\.$/.test(lastWord)) continue;
-                sentences.push(current.trim());
-                current = '';
-            }
-        }
+        // Split by double newlines (paragraph boundaries)
+        var paragraphs = newRegion.split(/\n\n+/);
+        if (paragraphs.length === 0) return;
 
-        if (sentences.length === 0) return;
-
+        // All paragraphs except the last are complete — send them
         var advancedChars = 0;
-        for (var j = 0; j < sentences.length; j++) {
-            var sentence = sentences[j];
-            if (sentence.length < 15) {
-                advancedChars += sentence.length + 1;
+        for (var j = 0; j < paragraphs.length - 1; j++) {
+            var paragraph = paragraphs[j].trim();
+            if (paragraph.length < 20) {
+                advancedChars += paragraph.length + 2;
                 continue;
             }
             var btn = this._streamButton || this._createPlaceholderButton();
             var resetFn = this._streamResetFn || function() {};
-            this.enqueue(sentence, btn, resetFn);
-            advancedChars += sentence.length + 1;
+            this.enqueue(paragraph, btn, resetFn);
+            advancedChars += paragraph.length + 2;
         }
 
         this._streamSentencesSent += advancedChars;
@@ -436,7 +448,7 @@ class AITTSManager {
         if (!plainText) return;
 
         var remaining = plainText.substring(this._streamSentencesSent).trim();
-        if (remaining.length >= 15) {
+        if (remaining.length >= 20) {
             var btn = this._streamButton || this._createPlaceholderButton();
             var resetFn = this._streamResetFn || function() {};
             this.enqueue(remaining, btn, resetFn);
@@ -457,7 +469,8 @@ window.aiTTSManager = new AITTSManager();
 
 // Function to add AI TTS button to a message element's action bar
 export function addAITTSButton(messageElement, text) {
-    if (!window.aiTTSManager.available || window.aiTTSManager._provider === 'disabled') {
+    // Always show the button — fall back to browser TTS if no provider is configured
+    if (!('speechSynthesis' in window)) {
         return;
     }
 

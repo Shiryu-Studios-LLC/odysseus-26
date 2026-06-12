@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Gallery Module — photo backup + AI-generated image library.
  */
 
@@ -2515,7 +2515,7 @@ export function openGallery() {
   const _bulkActionsBtn = document.getElementById('gallery-bulk-actions');
   function _showGalleryBulkMenu(anchor) {
     document.querySelectorAll('.gallery-bulk-menu').forEach(d => d.remove());
-    // Standard Shirabe dropdown (.dropdown + dropdown-item-compact) so it
+    // Standard Shirabi dropdown (.dropdown + dropdown-item-compact) so it
     // matches every other menu in the app. Positioned fixed at the button.
     const dropdown = document.createElement('div');
     dropdown.className = 'dropdown gallery-bulk-menu';

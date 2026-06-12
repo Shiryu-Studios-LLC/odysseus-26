@@ -1,10 +1,10 @@
-// static/js/storage.js
+﻿// static/js/storage.js
 // Centralized localStorage access with key constants and JSON parse safety
 
 // ── Key constants ──
 export const KEYS = {
-  THEME: 'shirabe-theme',
-  TOGGLES: 'shirabe-toggles',
+  THEME: 'shirabi-theme',
+  TOGGLES: 'shirabi-toggles',
   SIDEBAR_COLLAPSED: 'sidebar-collapsed',
   SIDEBAR_WIDTH: 'sidebar-width',
   SIDEBAR_SIDE: 'sidebar-side',
@@ -13,18 +13,18 @@ export const KEYS = {
   COMPARE_CHAT: 'compare-continue-chat',
   COMPARE_BLIND: 'compare-blind',
   COMPARE_RANDOM: 'compare-randomize',
-  MODELS_EXPANDED: 'shirabe-model-expanded',
-  MODEL_ENDPOINTS: 'shirabe-model-endpoints',
-  MODEL_SELECTED: 'shirabe-selected-model',
-  SORT_ORDER: 'shirabe-sessions-sort',
-  CHAT_SEARCH_SCOPE: 'shirabe-search-scope',
-  INCOGNITO: 'shirabe-incognito',
-  RAG_ACTIVE: 'shirabe-rag-active',
-  MCP_ACTIVE: 'shirabe-mcp-active',
+  MODELS_EXPANDED: 'shirabi-model-expanded',
+  MODEL_ENDPOINTS: 'shirabi-model-endpoints',
+  MODEL_SELECTED: 'shirabi-selected-model',
+  SORT_ORDER: 'shirabi-sessions-sort',
+  CHAT_SEARCH_SCOPE: 'shirabi-search-scope',
+  INCOGNITO: 'shirabi-incognito',
+  RAG_ACTIVE: 'shirabi-rag-active',
+  MCP_ACTIVE: 'shirabi-mcp-active',
   SECTION_ORDER: 'sidebar-section-order',
   ADMIN_LAST_TAB: 'admin-last-tab',
-  DENSITY: 'shirabe-density',
-  WORKSPACE: 'shirabe-workspace'
+  DENSITY: 'shirabi-density',
+  WORKSPACE: 'shirabi-workspace'
 };
 
 /**

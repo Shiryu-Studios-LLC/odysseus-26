@@ -1,4 +1,4 @@
-// ============================================
+﻿// ============================================
 // COOKBOOK RUNNING SUB-MODULE
 // Running tasks tab: task cards, status monitoring,
 // stop/restart, diagnosis, auto-fix, background monitor
@@ -219,7 +219,7 @@ function _buildCrashReport(task, outputText) {
   const diag = _diagnose(capturedOutput);
   const started = task?.ts ? new Date(task.ts).toISOString() : '';
   const report = [
-    '## Shirabe Cookbook crash report',
+    '## Shirabi Cookbook crash report',
     '',
     'Please review this report for secrets before posting it publicly.',
     '',
@@ -774,32 +774,32 @@ export function _tmuxCmd(task, tmuxArgs) {
 
 function _winSessionCmd(task, tmuxArgs) {
   const host = task.remoteHost;
-  const sd = host ? '$env:TEMP\\shirabe-sessions' : '$env:TEMP\\shirabe-tmux';
+  const sd = host ? '$env:TEMP\\shirabi-sessions' : '$env:TEMP\\shirabi-tmux';
   const sid = task.sessionId;
   const pf = _sshPrefix(_getPort(task));
   if (tmuxArgs.includes('capture-pane')) {
     const lines = tmuxArgs.match(/-S\s*-?(\d+)/)?.[1] || '200';
     const ps = host
       ? `Get-Content '${sd}\\${sid}.log' -Tail ${lines} -ErrorAction SilentlyContinue`
-      : `Get-Content (Join-Path $env:TEMP 'shirabe-tmux\\${sid}.log') -Tail ${lines} -ErrorAction SilentlyContinue`;
+      : `Get-Content (Join-Path $env:TEMP 'shirabi-tmux\\${sid}.log') -Tail ${lines} -ErrorAction SilentlyContinue`;
     return host ? `ssh ${pf}${host} "powershell -Command \\"${ps}\\""` : `powershell -Command "${ps}"`;
   }
   if (tmuxArgs.includes('has-session')) {
     const ps = host
       ? `$p = Get-Content '${sd}\\${sid}.pid' -ErrorAction SilentlyContinue; if ($p) { Get-Process -Id $p -ErrorAction SilentlyContinue | Out-Null; if ($?) { exit 0 } else { exit 1 } } else { exit 1 }`
-      : `$p = Get-Content (Join-Path $env:TEMP 'shirabe-tmux\\${sid}.pid') -ErrorAction SilentlyContinue; if ($p) { Get-Process -Id $p -ErrorAction SilentlyContinue | Out-Null; if ($?) { exit 0 } else { exit 1 } } else { exit 1 }`;
+      : `$p = Get-Content (Join-Path $env:TEMP 'shirabi-tmux\\${sid}.pid') -ErrorAction SilentlyContinue; if ($p) { Get-Process -Id $p -ErrorAction SilentlyContinue | Out-Null; if ($?) { exit 0 } else { exit 1 } } else { exit 1 }`;
     return host ? `ssh ${pf}${host} "powershell -Command \\"${ps}\\""` : `powershell -Command "${ps}"`;
   }
   if (tmuxArgs.includes('kill-session')) {
     const ps = host
       ? `$p = Get-Content '${sd}\\${sid}.pid' -ErrorAction SilentlyContinue; if ($p) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue }; Remove-Item '${sd}\\${sid}.*' -Force -ErrorAction SilentlyContinue`
-      : `$p = Get-Content (Join-Path $env:TEMP 'shirabe-tmux\\${sid}.pid') -ErrorAction SilentlyContinue; if ($p) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue }; Remove-Item (Join-Path $env:TEMP 'shirabe-tmux\\${sid}.*') -Force -ErrorAction SilentlyContinue`;
+      : `$p = Get-Content (Join-Path $env:TEMP 'shirabi-tmux\\${sid}.pid') -ErrorAction SilentlyContinue; if ($p) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue }; Remove-Item (Join-Path $env:TEMP 'shirabi-tmux\\${sid}.*') -Force -ErrorAction SilentlyContinue`;
     return host ? `ssh ${pf}${host} "powershell -Command \\"${ps}\\""` : `powershell -Command "${ps}"`;
   }
   if (tmuxArgs.includes('send-keys') && tmuxArgs.includes('C-c')) {
     const ps = host
       ? `$p = Get-Content '${sd}\\${sid}.pid' -ErrorAction SilentlyContinue; if ($p) { Stop-Process -Id $p -ErrorAction SilentlyContinue }`
-      : `$p = Get-Content (Join-Path $env:TEMP 'shirabe-tmux\\${sid}.pid') -ErrorAction SilentlyContinue; if ($p) { Stop-Process -Id $p -ErrorAction SilentlyContinue }`;
+      : `$p = Get-Content (Join-Path $env:TEMP 'shirabi-tmux\\${sid}.pid') -ErrorAction SilentlyContinue; if ($p) { Stop-Process -Id $p -ErrorAction SilentlyContinue }`;
     return host ? `ssh ${pf}${host} "powershell -Command \\"${ps}\\""` : `powershell -Command "${ps}"`;
   }
   return host ? `ssh ${pf}${host} 'tmux ${tmuxArgs}' 2>/dev/null` : `tmux ${tmuxArgs} 2>/dev/null`;
@@ -808,12 +808,12 @@ function _winSessionCmd(task, tmuxArgs) {
 function _tmuxGracefulKill(task) {
   if (_isWindows(task)) {
     const host = task.remoteHost;
-    const sd = host ? '$env:TEMP\\shirabe-sessions' : '$env:TEMP\\shirabe-tmux';
+    const sd = host ? '$env:TEMP\\shirabi-sessions' : '$env:TEMP\\shirabi-tmux';
     const sid = task.sessionId;
     const pf = _sshPrefix(_getPort(task));
     const ps = host
       ? `$p = Get-Content '${sd}\\${sid}.pid' -ErrorAction SilentlyContinue; if ($p) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue }; Remove-Item '${sd}\\${sid}.*' -Force -ErrorAction SilentlyContinue`
-      : `$p = Get-Content (Join-Path $env:TEMP 'shirabe-tmux\\${sid}.pid') -ErrorAction SilentlyContinue; if ($p) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue }; Remove-Item (Join-Path $env:TEMP 'shirabe-tmux\\${sid}.*') -Force -ErrorAction SilentlyContinue`;
+      : `$p = Get-Content (Join-Path $env:TEMP 'shirabi-tmux\\${sid}.pid') -ErrorAction SilentlyContinue; if ($p) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue }; Remove-Item (Join-Path $env:TEMP 'shirabi-tmux\\${sid}.*') -Force -ErrorAction SilentlyContinue`;
     return host ? `ssh ${pf}${host} "powershell -Command \\"${ps}\\""` : `powershell -Command "${ps}"`;
   }
   if (task.remoteHost) {
@@ -1134,7 +1134,7 @@ async function _retryTask(el, task) {
       uiModule.showToast('Retrying download — progress may look reset while HuggingFace checks cached files, then it should resume.', 7000);
       _updateTask(task.sessionId, {
         status: 'running',
-        output: `${task.output || ''}\n\n[shirabe] Retrying download. Progress may briefly look like a fresh download while HuggingFace checks cached/incomplete files; cached partial files will be reused when available.`.trim(),
+        output: `${task.output || ''}\n\n[shirabi] Retrying download. Progress may briefly look like a fresh download while HuggingFace checks cached/incomplete files; cached partial files will be reused when available.`.trim(),
         _retrying: true,
       });
       _retryDownload(task.name, task.payload, task.sessionId);
@@ -2173,10 +2173,10 @@ export function _renderRunningTab() {
         }
         if (_isWindows(task)) {
           const host = task.remoteHost;
-          const sd = host ? '$env:TEMP\\shirabe-sessions' : '$env:TEMP\\shirabe-tmux';
+          const sd = host ? '$env:TEMP\\shirabi-sessions' : '$env:TEMP\\shirabi-tmux';
           const logCmd = host
             ? `ssh ${_sshPrefix(_getPort(task))}${host} "powershell -Command \\"Get-Content '${sd}\\${task.sessionId}.log' -Wait\\""`
-            : `powershell -Command "Get-Content (Join-Path $env:TEMP 'shirabe-tmux\\${task.sessionId}.log') -Wait"`;
+            : `powershell -Command "Get-Content (Join-Path $env:TEMP 'shirabi-tmux\\${task.sessionId}.log') -Wait"`;
           items.push({ label: 'Copy log cmd', action: 'copy-tmux', custom: () => {
             _copyText(logCmd);
           }});

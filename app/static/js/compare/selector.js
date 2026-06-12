@@ -1,4 +1,4 @@
-// compare/selector.js — model selection modal
+﻿// compare/selector.js — model selection modal
 import state from './state.js';
 import Storage from '../storage.js';
 import { fetchModels, _persistSelections, getExcludedModels } from './models.js';
@@ -393,11 +393,11 @@ async function showModelSelector() {
     listContainer.appendChild(_loadingDiv);
 
     // Restore last used selections from storage (per-mode)
-    const _selKey = 'shirabe-compare-selections-' + (state._compareMode || 'chat');
-    let selections = Storage.getJSON(_selKey) || Storage.getJSON('shirabe-compare-selections') || [];
+    const _selKey = 'shirabi-compare-selections-' + (state._compareMode || 'chat');
+    let selections = Storage.getJSON(_selKey) || Storage.getJSON('shirabi-compare-selections') || [];
     // Restore synthesis models for search/research
     if (state._compareMode === 'search' || state._compareMode === 'research') {
-      const savedSynth = Storage.getJSON('shirabe-compare-synth-' + state._compareMode);
+      const savedSynth = Storage.getJSON('shirabi-compare-synth-' + state._compareMode);
       if (savedSynth) state._searchSynthModels = savedSynth;
     }
     // Validate saved selections against available models (done after models load)

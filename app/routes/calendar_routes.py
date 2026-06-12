@@ -36,12 +36,12 @@ def _ics_naive_dtstart(dt):
 # Single-user fallback identity. Used only when:
 #   1. The app is configured for single-user (no auth middleware), AND
 #   2. The request didn't resolve to an authenticated user.
-# Override at deploy time via `SHIRABE_FALLBACK_OWNER` env var. In a real
-# multi-user install set `SHIRABE_SINGLE_USER=0` so unauthenticated requests
+# Override at deploy time via `SHIRABI_FALLBACK_OWNER` env var. In a real
+# multi-user install set `SHIRABI_SINGLE_USER=0` so unauthenticated requests
 # are rejected instead of silently writing to this address.
 import os as _os
-FALLBACK_OWNER = _os.environ.get("SHIRABE_FALLBACK_OWNER", "owner@localhost")
-_SINGLE_USER_MODE = _os.environ.get("SHIRABE_SINGLE_USER", "1") != "0"
+FALLBACK_OWNER = _os.environ.get("SHIRABI_FALLBACK_OWNER", "owner@localhost")
+_SINGLE_USER_MODE = _os.environ.get("SHIRABI_SINGLE_USER", "1") != "0"
 
 
 def _require_user(request: Request) -> str:
@@ -1144,7 +1144,7 @@ def setup_calendar_routes() -> APIRouter:
             lines = [
                 "BEGIN:VCALENDAR",
                 "VERSION:2.0",
-                "PRODID:-//Shirabe//Calendar//EN",
+                "PRODID:-//Shirabi//Calendar//EN",
                 f"X-WR-CALNAME:{_ics_escape(cal.name)}",
             ]
             for ev in events:

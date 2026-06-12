@@ -50,6 +50,13 @@ Thumbs.db
 *.cache
 cache/
 output.txt.txt
+src/TrayApp/bin/
+src/TrayApp/obj/
+
+# Published binaries (built locally)
+Shirabi Tray.exe
+Shirabi.exe
+app/companion/Builds/
 
 # Media (uploaded/generated)
 *.jpg
@@ -76,6 +83,8 @@ output.txt.txt
 
 
 # Reports and temp files
+graphify-out/
+**/graphify-out/
 reports/
 tasks/
 scripts/compound/*.json

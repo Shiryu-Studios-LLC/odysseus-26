@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Notes Module — Google Keep-style notes and todos.
  * Renders as a sidebar panel (like document editor), not a modal.
  */
@@ -23,7 +23,7 @@ let _activeFilter = null; // null | 'default' | 'reminders' | 'no-reminders'
 // state the next click should land on after passing through null.
 let _reminderChipNext = 'reminders';
 let _searchQuery = '';
-let _viewMode = (typeof localStorage !== 'undefined' && localStorage.getItem('shirabe-notes-view')) || 'list'; // 'list' or 'grid'
+let _viewMode = (typeof localStorage !== 'undefined' && localStorage.getItem('shirabi-notes-view')) || 'list'; // 'list' or 'grid'
 let _showingArchived = false;
 let _selectMode = false;
 let _reminderTimer = null;
@@ -31,18 +31,18 @@ let _reminderTimer = null;
 // (previously leaked one per openPanel; on multi-open sessions this
 // stacked dozens of identical handlers).
 let _notesKeydownHandler = null;
-const REMINDER_FIRED_KEY = 'shirabe-notes-reminder-fired';
+const REMINDER_FIRED_KEY = 'shirabi-notes-reminder-fired';
 // Note IDs already shown with the entry-glow once. Re-set when the user
 // reschedules the reminder so the new firing glows again on next open.
-const REMINDER_GLOWED_KEY = 'shirabe-notes-reminder-glowed';
+const REMINDER_GLOWED_KEY = 'shirabi-notes-reminder-glowed';
 // IDs of notes whose reminders fired while the notes panel was closed. On the
 // next open of the panel we briefly glow those cards so the user can spot them.
-const REMINDER_PENDING_HIGHLIGHT_KEY = 'shirabe-notes-reminder-pending-highlight';
-const REMINDER_ACTIVE_HIGHLIGHT_KEY = 'shirabe-notes-reminder-active-highlight';
+const REMINDER_PENDING_HIGHLIGHT_KEY = 'shirabi-notes-reminder-pending-highlight';
+const REMINDER_ACTIVE_HIGHLIGHT_KEY = 'shirabi-notes-reminder-active-highlight';
 // Timestamp of the last time the user opened the notes panel — used to gate
 // the rail "fired" badge so old reminders don't re-fire on every page reload.
-const REMINDER_DISMISSED_AT_KEY = 'shirabe-notes-reminder-dismissed-at';
-const NOTES_FIRST_OPEN_HINT_KEY = 'shirabe-notes-first-open-hint-v1';
+const REMINDER_DISMISSED_AT_KEY = 'shirabi-notes-reminder-dismissed-at';
+const NOTES_FIRST_OPEN_HINT_KEY = 'shirabi-notes-first-open-hint-v1';
 
 function _forceCloseNotesPanel() {
   _open = false;
@@ -1256,7 +1256,7 @@ export function openPanel() {
     requestAnimationFrame(() => _applyMasonry(document.querySelector('#notes-pane .notes-pane-body')));
     viewBtn.addEventListener('click', () => {
       _viewMode = _viewMode === 'grid' ? 'list' : 'grid';
-      try { localStorage.setItem('shirabe-notes-view', _viewMode); } catch {}
+      try { localStorage.setItem('shirabi-notes-view', _viewMode); } catch {}
       pane.classList.toggle('notes-view-grid', _viewMode === 'grid');
       _setViewLabel();
       requestAnimationFrame(() => _applyMasonry(document.querySelector('#notes-pane .notes-pane-body')));
@@ -2713,7 +2713,7 @@ function _bindCardEvents(body) {
 // tab closes, or the page reloads before Save is hit, reopening that note
 // restores the unsaved text. Drafts are cleared on an explicit Save or
 // Cancel. Survives offline because it never touches the network.
-const _DRAFT_PREFIX = 'shirabe-note-draft-';
+const _DRAFT_PREFIX = 'shirabi-note-draft-';
 function _draftKey(id) { return _DRAFT_PREFIX + (id || '__new__'); }
 function _loadDraft(id) {
   try { return JSON.parse(localStorage.getItem(_draftKey(id)) || 'null'); } catch { return null; }
